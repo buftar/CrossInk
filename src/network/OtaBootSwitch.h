@@ -1,9 +1,11 @@
 #pragma once
 
 #include <esp_partition.h>
+#include <Preferences.h>
 
 #include <cstddef>
 #include <cstdint>
+#include <string>
 
 // X4 (and X3) factory bootloaders accept our patch_firmware_image.py-patched
 // firmware.bin (web flasher proves this), but the running ESP-IDF's
@@ -39,5 +41,14 @@ uint32_t computeSeqCrc(uint32_t seq);
 //
 // Returns true on success.
 bool switchTo(const esp_partition_t* dest);
+
+// Check whether the given OTA partition holds a "foreign" app — i.e. a valid
+// app image whose identity differs from our own.  Returns an empty string when
+// the slot is empty, corrupted, or holds our own app.  When non-empty the
+// returned string is the display name of the foreign app (from ota_names NVS
+// or the app-descriptor project_name as fallback).
+//
+// Zero heap cost on the empty/own-app path (stack-only reads).
+std::string getForeignAppName(const esp_partition_t* target);
 
 }  // namespace ota_boot

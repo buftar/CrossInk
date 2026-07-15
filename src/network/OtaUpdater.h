@@ -22,6 +22,7 @@ class OtaUpdater {
     JSON_PARSE_ERROR,
     UPDATE_OLDER_ERROR,
     INTERNAL_UPDATE_ERROR,
+    OTA_UPDATE_GUARD_BLOCKED,  // Dual-boot: target slot holds a foreign app
     OOM_ERROR,
     CANCELLED_ERROR,
     HASH_MISMATCH_ERROR,

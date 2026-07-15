@@ -35,4 +35,4 @@ lib/EpdFont/scripts/output/
 /site/public/catalog
 /site/public/CNAME
 
-dist-publish/
+dist-publish/platformio.local.ini

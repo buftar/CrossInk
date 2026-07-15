@@ -10,6 +10,7 @@
 #include <Preferences.h>
 #include <ScratchWorkspace.h>
 #include <esp_app_format.h>
+#include <esp_ota_ops.h>
 #include <esp_partition.h>
 #include "network/OtaBootSwitch.h"
 #include <Serialization.h>
@@ -255,17 +256,18 @@ const char* savedItemsLabel(bool hasBookmarks, bool hasClippings) {
 
 // ============================================================================
 // Dual-boot: detect foreign app in other OTA slot
-// Returns the display name of the other app, or empty string if none.
-// Zero heap cost when absent (stack-only).
+// Fills `out` with the display name of the other app; returns false if none.
+// Zero heap cost when absent (stack-only, aside from NVS read).
 // ============================================================================
-static std::string_view getDualBootAppName() {
-  const esp_partition_t* running = esp_ota_get_running_partition();
-  if (!running) return {};
+static bool getDualBootAppName(char* out, size_t outLen) {
+  if (!out || outLen == 0) return false;
+  out[0] = '\0';
 
-  esp_partition_iterator_t it = esp_partition_find(ESP_PARTITION_TYPE_APP,
-                                                    ESP_PARTITION_SUBTYPE_ANY, NULL);
+  const esp_partition_t* running = esp_ota_get_running_partition();
+  if (!running) return false;
+
   char ownName[32] = {0};
-  if (running) {
+  {
     esp_app_desc_t desc;
     if (esp_ota_get_partition_description(running, &desc) == ESP_OK) {
       snprintf(ownName, sizeof(ownName), "%s", desc.project_name);
@@ -273,9 +275,11 @@ static std::string_view getDualBootAppName() {
   }
 
   Preferences otaPrefs;
-  otaPrefs.begin("ota_names", true);  // read-only
+  const bool prefsOk = otaPrefs.begin("ota_names", true);  // read-only
 
-  std::string_view result;
+  bool found = false;
+  esp_partition_iterator_t it = esp_partition_find(ESP_PARTITION_TYPE_APP,
+                                                    ESP_PARTITION_SUBTYPE_ANY, NULL);
   while (it != NULL) {
     const esp_partition_t* part = esp_partition_get(it);
     if (part && part != running
@@ -288,12 +292,13 @@ static std::string_view getDualBootAppName() {
           int slot = part->subtype - ESP_PARTITION_SUBTYPE_APP_OTA_0;
           char key[8];
           snprintf(key, sizeof(key), "ota_%d", slot);
-          const char* nvsName = otaPrefs.getString(key, "");
-          if (nvsName && nvsName[0] != '\0') {
-            result = std::string_view(nvsName);
+          String nvsName = prefsOk ? otaPrefs.getString(key, "") : String();
+          if (nvsName.length() > 0) {
+            snprintf(out, outLen, "%s", nvsName.c_str());
           } else {
-            result = std::string_view(desc.project_name);
+            snprintf(out, outLen, "%s", desc.project_name);
           }
+          found = true;
           break;
         }
       }
@@ -301,8 +306,29 @@ static std::string_view getDualBootAppName() {
     it = esp_partition_next(it);
   }
   esp_partition_iterator_release(it);
-  otaPrefs.end();
-  return result;
+  if (prefsOk) otaPrefs.end();
+  return found;
+}
+
+// Dual-boot: reboot into the app occupying the other OTA slot.
+// Raw otadata write (ota_boot::switchTo) — esp_ota_set_boot_partition's image
+// verification is unreliable on X3 silicon.
+static void switchToOtherOtaApp() {
+  const esp_partition_t* running = esp_ota_get_running_partition();
+  if (!running) return;
+  const esp_partition_subtype_t otherSubtype =
+      (running->subtype == ESP_PARTITION_SUBTYPE_APP_OTA_0) ? ESP_PARTITION_SUBTYPE_APP_OTA_1
+                                                            : ESP_PARTITION_SUBTYPE_APP_OTA_0;
+  const esp_partition_t* target =
+      esp_partition_find_first(ESP_PARTITION_TYPE_APP, otherSubtype, NULL);
+  if (!target) {
+    LOG_ERR("BOOT", "No app partition found in other OTA slot");
+    return;
+  }
+  LOG_INF("BOOT", "Switching to app in OTA slot %d", otherSubtype - ESP_PARTITION_SUBTYPE_APP_OTA_0);
+  if (ota_boot::switchTo(target)) {
+    ESP.restart();  // intentional recovery flow: reboot into the other app
+  }
 }
 
 void appendHomeMenuItems(HomeMenuEntries& items, bool hasOpdsServers, bool hasReadingStats, bool hasBookmarks,
@@ -323,11 +349,11 @@ void appendHomeMenuItems(HomeMenuEntries& items, bool hasOpdsServers, bool hasRe
   items.push({tr(STR_FILE_TRANSFER), Transfer, HomeMenuAction::FileTransfer});
 
   // Dual-boot: show switch entry when another app is detected in the other OTA slot
-  auto dualBootName = getDualBootAppName();
-  if (!dualBootName.empty()) {
-    // Use a static buffer so the string_view lives long enough
+  char dualBootName[40];
+  if (getDualBootAppName(dualBootName, sizeof(dualBootName))) {
+    // Static buffer: menu entries hold a const char* that must outlive this scope
     static char switchLabel[64];
-    snprintf(switchLabel, sizeof(switchLabel), "Switch to %s", dualBootName.data());
+    snprintf(switchLabel, sizeof(switchLabel), "Switch to %s", dualBootName);
     items.push({switchLabel, Transfer, HomeMenuAction::SwitchApp});
   }
 
@@ -1537,25 +1563,9 @@ void HomeActivity::loop() {
           case HomeMenuAction::ContinueReading:
           case HomeMenuAction::Settings:
             break;
-          case HomeMenuAction::SwitchApp: {
-            // Dual-boot: switch to the other OTA slot
-            const esp_partition_t* running = esp_ota_get_running_partition();
-            if (running) {
-              int currentSubtype = running->subtype;
-              int otherSubtype = (currentSubtype == ESP_PARTITION_SUBTYPE_APP_OTA_0)
-                                    ? ESP_PARTITION_SUBTYPE_APP_OTA_1
-                                    : ESP_PARTITION_SUBTYPE_APP_OTA_0;
-              const esp_partition_t* target = esp_partition_find_first(
-                  ESP_PARTITION_TYPE_APP,
-                  static_cast<esp_partition_subtype_t>(otherSubtype), NULL);
-              if (target) {
-                LOG_INF("BOOT", "Switching to app in OTA slot %d", otherSubtype);
-                ota_boot::switchTo(target);
-                ESP.restart();
-              }
-            }
+          case HomeMenuAction::SwitchApp:
+            // Dual-boot entry is only built into the full home menu, not this one
             break;
-          }
         }
       }
       return;
@@ -1753,7 +1763,7 @@ void HomeActivity::loop() {
         onSettingsOpen();
         break;
       case HomeMenuAction::SwitchApp:
-        // Handled above in the full menu path; minimal menu shouldn't reach here
+        switchToOtherOtaApp();
         break;
     }
   }

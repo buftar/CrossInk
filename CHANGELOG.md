@@ -1,3 +1,13 @@
+## [Unreleased]
+
+### Added
+
+- Dual-boot support: CrossInk registers its name in the shared `ota_names` NVS namespace at boot, and the Home menu shows a "Switch to <app>" entry when another app (e.g. MicroSlate) occupies the other OTA slot. Switching uses raw otadata writes (`ota_boot::switchTo`), which are reliable on X3 silicon where standard image verification is not.
+
+### Fixed
+
+- Dual-boot switch entry now works when selected: the action was dispatched from the wrong Home menu path and previously did nothing. Also fixed missing `esp_ota_ops.h` includes that prevented the dual-boot code from compiling, and a dangling string view in the partner-app name lookup.
+
 ## [v1.4.0] - 2026-07-10
 
 ### Added

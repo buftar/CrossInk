@@ -58,6 +58,7 @@ inline esp_sleep_wakeup_cause_t esp_sleep_get_wakeup_cause() { return ESP_SLEEP_
 #else
 #include <esp_sleep.h>
 #include <esp_system.h>
+#include <esp_ota_ops.h>
 #include <Preferences.h>
 #endif
 

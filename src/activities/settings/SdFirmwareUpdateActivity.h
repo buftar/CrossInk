@@ -23,6 +23,7 @@ class SdFirmwareUpdateActivity : public Activity {
     PICKING,
     VALIDATING,
     CONFIRMING,
+    GUARD_CONFIRM,  // Dual-boot: warn before overwriting sibling app
     UPDATING,
     SUCCESS,
     FAILED,
@@ -34,7 +35,7 @@ class SdFirmwareUpdateActivity : public Activity {
   void onEnter() override;
   void loop() override;
   void render(RenderLock&&) override;
-  bool preventAutoSleep() override { return state == State::UPDATING || state == State::VALIDATING; }
+  bool preventAutoSleep() override { return state == State::UPDATING || state == State::VALIDATING || state == State::GUARD_CONFIRM; }
   bool skipLoopDelay() override { return state == State::UPDATING; }
 
  private:
@@ -46,6 +47,9 @@ class SdFirmwareUpdateActivity : public Activity {
   size_t writtenBytes = 0;
   unsigned int lastRenderedPercent = 101;
   std::string errorMessage;
+
+  // Dual-boot guard: foreign app name stored for the confirm screen
+  char foreignAppName[64] = {};
 
   void launchPicker();
   void onPickerResult(const ActivityResult& result);

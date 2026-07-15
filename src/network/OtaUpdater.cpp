@@ -16,6 +16,7 @@ OtaUpdater::OtaUpdaterError OtaUpdater::installUpdate(ProgressCallback, void*, s
 
 #include "AppVersion.h"
 #include "OtaUpdater.h"
+#include "OtaBootSwitch.h"
 #include "esp_http_client.h"
 #include "esp_ota_ops.h"
 #include "mbedtls/sha256.h"
@@ -430,6 +431,13 @@ OtaUpdater::OtaUpdaterError OtaUpdater::installUpdate(ProgressCallback onProgres
   if (updatePartition == nullptr) {
     LOG_ERR("OTA", "No OTA update partition found");
     return INTERNAL_UPDATE_ERROR;
+  }
+
+  // Dual-boot guard: check if target slot holds a foreign app
+  auto foreignName = ota_boot::getForeignAppName(updatePartition);
+  if (!foreignName.empty()) {
+    LOG_INF("OTA", "Update guard: foreign app \"%s\" in target slot — aborting", foreignName.c_str());
+    return OTA_UPDATE_GUARD_BLOCKED;
   }
 
   if (otaSize > 0 && otaSize > updatePartition->size) {

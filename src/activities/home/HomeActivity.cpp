@@ -7,7 +7,11 @@
 #include <HalStorage.h>
 #include <I18n.h>
 #include <InflateReader.h>
+#include <Preferences.h>
 #include <ScratchWorkspace.h>
+#include <esp_app_format.h>
+#include <esp_partition.h>
+#include "network/OtaBootSwitch.h"
 #include <Serialization.h>
 #include <Utf8.h>
 #include <Xtc.h>
@@ -58,6 +62,7 @@ enum class HomeMenuAction {
   Bookmarks,
   FileTransfer,
   Settings,
+  SwitchApp,  // Dual-boot: switch to app in other OTA slot
 };
 
 struct HomeMenuEntry {
@@ -67,7 +72,7 @@ struct HomeMenuEntry {
 };
 
 struct HomeMenuEntries {
-  static constexpr int kCapacity = 8;
+  static constexpr int kCapacity = 9;
   std::array<HomeMenuEntry, kCapacity> entries{};
   int count = 0;
 
@@ -248,6 +253,58 @@ const char* savedItemsLabel(bool hasBookmarks, bool hasClippings) {
   return tr(STR_BOOKMARKS);
 }
 
+// ============================================================================
+// Dual-boot: detect foreign app in other OTA slot
+// Returns the display name of the other app, or empty string if none.
+// Zero heap cost when absent (stack-only).
+// ============================================================================
+static std::string_view getDualBootAppName() {
+  const esp_partition_t* running = esp_ota_get_running_partition();
+  if (!running) return {};
+
+  esp_partition_iterator_t it = esp_partition_find(ESP_PARTITION_TYPE_APP,
+                                                    ESP_PARTITION_SUBTYPE_ANY, NULL);
+  char ownName[32] = {0};
+  if (running) {
+    esp_app_desc_t desc;
+    if (esp_ota_get_partition_description(running, &desc) == ESP_OK) {
+      snprintf(ownName, sizeof(ownName), "%s", desc.project_name);
+    }
+  }
+
+  Preferences otaPrefs;
+  otaPrefs.begin("ota_names", true);  // read-only
+
+  std::string_view result;
+  while (it != NULL) {
+    const esp_partition_t* part = esp_partition_get(it);
+    if (part && part != running
+        && part->subtype >= ESP_PARTITION_SUBTYPE_APP_OTA_0
+        && part->subtype <= ESP_PARTITION_SUBTYPE_APP_OTA_15) {
+      esp_app_desc_t desc;
+      if (esp_ota_get_partition_description(part, &desc) == ESP_OK) {
+        // Check if this is a different app
+        if (strncmp(ownName, desc.project_name, sizeof(ownName)) != 0) {
+          int slot = part->subtype - ESP_PARTITION_SUBTYPE_APP_OTA_0;
+          char key[8];
+          snprintf(key, sizeof(key), "ota_%d", slot);
+          const char* nvsName = otaPrefs.getString(key, "");
+          if (nvsName && nvsName[0] != '\0') {
+            result = std::string_view(nvsName);
+          } else {
+            result = std::string_view(desc.project_name);
+          }
+          break;
+        }
+      }
+    }
+    it = esp_partition_next(it);
+  }
+  esp_partition_iterator_release(it);
+  otaPrefs.end();
+  return result;
+}
+
 void appendHomeMenuItems(HomeMenuEntries& items, bool hasOpdsServers, bool hasReadingStats, bool hasBookmarks,
                          bool hasClippings) {
   items.push({tr(STR_BROWSE_FILES), Folder, HomeMenuAction::BrowseFiles});
@@ -264,6 +321,16 @@ void appendHomeMenuItems(HomeMenuEntries& items, bool hasOpdsServers, bool hasRe
   }
 
   items.push({tr(STR_FILE_TRANSFER), Transfer, HomeMenuAction::FileTransfer});
+
+  // Dual-boot: show switch entry when another app is detected in the other OTA slot
+  auto dualBootName = getDualBootAppName();
+  if (!dualBootName.empty()) {
+    // Use a static buffer so the string_view lives long enough
+    static char switchLabel[64];
+    snprintf(switchLabel, sizeof(switchLabel), "Switch to %s", dualBootName.data());
+    items.push({switchLabel, Transfer, HomeMenuAction::SwitchApp});
+  }
+
   items.push({tr(STR_SETTINGS_TITLE), Settings, HomeMenuAction::Settings});
 }
 
@@ -1470,6 +1537,25 @@ void HomeActivity::loop() {
           case HomeMenuAction::ContinueReading:
           case HomeMenuAction::Settings:
             break;
+          case HomeMenuAction::SwitchApp: {
+            // Dual-boot: switch to the other OTA slot
+            const esp_partition_t* running = esp_ota_get_running_partition();
+            if (running) {
+              int currentSubtype = running->subtype;
+              int otherSubtype = (currentSubtype == ESP_PARTITION_SUBTYPE_APP_OTA_0)
+                                    ? ESP_PARTITION_SUBTYPE_APP_OTA_1
+                                    : ESP_PARTITION_SUBTYPE_APP_OTA_0;
+              const esp_partition_t* target = esp_partition_find_first(
+                  ESP_PARTITION_TYPE_APP,
+                  static_cast<esp_partition_subtype_t>(otherSubtype), NULL);
+              if (target) {
+                LOG_INF("BOOT", "Switching to app in OTA slot %d", otherSubtype);
+                ota_boot::switchTo(target);
+                ESP.restart();
+              }
+            }
+            break;
+          }
         }
       }
       return;
@@ -1665,6 +1751,9 @@ void HomeActivity::loop() {
         break;
       case HomeMenuAction::Settings:
         onSettingsOpen();
+        break;
+      case HomeMenuAction::SwitchApp:
+        // Handled above in the full menu path; minimal menu shouldn't reach here
         break;
     }
   }

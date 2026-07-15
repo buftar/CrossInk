@@ -67,6 +67,7 @@ inline esp_sleep_wakeup_cause_t esp_sleep_get_wakeup_cause() { return ESP_SLEEP_
 #else
 #include <esp_sleep.h>
 #include <esp_system.h>
+#include <Preferences.h>
 #endif
 
 #include <algorithm>
@@ -1108,6 +1109,23 @@ void enterDeepSleep(bool fromTimeout) {
   powerManager.startDeepSleep(gpio);
 }
 
+// ============================================================================
+// Dual-boot: register this app's name in shared NVS (MicroSlate convention)
+// ============================================================================
+static void registerDualBootAppName() {
+  const esp_partition_t* self = esp_ota_get_running_partition();
+  if (!self) return;
+  int slot = self->subtype - ESP_PARTITION_SUBTYPE_APP_OTA_0;
+  char key[8];
+  snprintf(key, sizeof(key), "ota_%d", slot);
+  Preferences prefs;
+  if (prefs.begin("ota_names", false)) {
+    prefs.putString(key, "CrossInk");
+    prefs.end();
+    LOG_DBG("BOOT", "Registered as \"CrossInk\" in ota_names/ota_%d", slot);
+  }
+}
+
 void setupDisplayAndFonts(const bool seamless, const bool loadReaderResources, const bool useReaderRenderStack) {
 #if !defined(SIMULATOR) && !FREEINK_MCU_C3
   // C3 X3/X4 detection already runs in HalGPIO::begin() before SPI owns the
@@ -1564,6 +1582,8 @@ void setup() {
     gpio.update();
   }
 
+  // Register dual-boot app name in shared NVS (MicroSlate convention)
+  registerDualBootAppName();
   allowSleepAt = millis() + 2000;
 }
 

@@ -712,6 +712,10 @@ int HomeActivity::getMenuItemCount() const {
   if (hasBookmarks || hasClippings) {
     count++;
   }
+  char dualBootName[40];
+  if (getDualBootAppName(dualBootName, sizeof(dualBootName))) {
+    count++;
+  }
   return count;
 }
 

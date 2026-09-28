@@ -56,5 +56,5 @@ class SdFirmwareUpdateActivity : public Activity {
   bool validateFirmware();
   void promptConfirmation();
   void onConfirmationResult(const ActivityResult& result);
-  void performUpdate();
+  void performUpdate(bool skipGuardCheck = false);
 };

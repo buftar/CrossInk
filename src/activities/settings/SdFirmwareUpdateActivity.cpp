@@ -152,7 +152,7 @@ void SdFirmwareUpdateActivity::onConfirmationResult(const ActivityResult& result
   performUpdate();
 }
 
-void SdFirmwareUpdateActivity::performUpdate() {
+void SdFirmwareUpdateActivity::performUpdate(bool skipGuardCheck) {
   LOG_INF("FW", "SD update: %s (%u bytes)", firmwarePath.c_str(), static_cast<unsigned>(firmwareSize));
 
   auto progressCb = +[](size_t written, size_t total, void* ctx) {
@@ -169,9 +169,12 @@ void SdFirmwareUpdateActivity::performUpdate() {
   // for callers (e.g. an OTA staging path) where the same byte stream was
   // just hashed and there's no removable-media gap.
 
-  // Dual-boot guard: warn if the target slot holds a sibling app
+  // Dual-boot guard: warn if the target slot holds a sibling app. Skipped on
+  // retry after the user already confirmed once — otherwise this re-detects
+  // the same foreign app (nothing has been flashed yet) and loops back into
+  // GUARD_CONFIRM forever, so Confirm can never actually proceed.
   const esp_partition_t* dest = esp_ota_get_next_update_partition(nullptr);
-  if (dest) {
+  if (dest && !skipGuardCheck) {
     auto foreignName = ota_boot::getForeignAppName(dest);
     if (!foreignName.empty()) {
       LOG_INF("FW", "SD update guard: foreign app \"%s\" in target slot", foreignName.c_str());
@@ -212,7 +215,7 @@ void SdFirmwareUpdateActivity::loop() {
       // User confirmed — proceed with update
       LOG_INF("FW", "SD update guard: user confirmed overwrite of \"%s\"", foreignAppName);
       strncpy(foreignAppName, "", sizeof(foreignAppName));
-      performUpdate();
+      performUpdate(/*skipGuardCheck=*/true);
       return;
     }
     if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {

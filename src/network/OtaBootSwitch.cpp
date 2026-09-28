@@ -3,8 +3,8 @@
 #include <Logging.h>
 #include <Preferences.h>
 #include <esp_app_format.h>
-#include <esp_rom_crc.h>
 #include <esp_ota_ops.h>
+#include <esp_rom_crc.h>
 #include <spi_flash_mmap.h>
 #include <string.h>
 
@@ -122,8 +122,7 @@ std::string getForeignAppName(const esp_partition_t* target) {
   }
 
   // Fallback to project_name from app descriptor
-  LOG_DBG("BOOT", "Foreign app detected in OTA slot %d: \"%s\" (from app descriptor)", slot,
-          targetDesc.project_name);
+  LOG_DBG("BOOT", "Foreign app detected in OTA slot %d: \"%s\" (from app descriptor)", slot, targetDesc.project_name);
   return std::string(targetDesc.project_name);
 }
 

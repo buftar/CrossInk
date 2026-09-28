@@ -9,12 +9,11 @@
 #include <I18n.h>
 #include <Memory.h>
 #include <MemoryBudget.h>
-#include <esp_ota_ops.h>
-#include <esp_partition.h>
-#include "network/OtaBootSwitch.h"
 #include <Serialization.h>
 #include <Utf8.h>
 #include <Xtc.h>
+#include <esp_ota_ops.h>
+#include <esp_partition.h>
 
 #include <algorithm>
 #include <array>
@@ -44,6 +43,7 @@
 #include "components/themes/lyra/LyraCarouselTheme.h"
 #include "components/themes/minimal/MinimalTheme.h"
 #include "fontIds.h"
+#include "network/OtaBootSwitch.h"
 
 namespace {
 constexpr uint32_t CAROUSEL_CACHE_MAGIC = 0x43434152;  // "CCAR"
@@ -273,9 +273,9 @@ const char* savedItemsLabel(bool hasBookmarks, bool hasClippings) {
 static const esp_partition_t* getOtherOtaPartition() {
   const esp_partition_t* running = esp_ota_get_running_partition();
   if (!running) return nullptr;
-  const esp_partition_subtype_t otherSubtype =
-      (running->subtype == ESP_PARTITION_SUBTYPE_APP_OTA_0) ? ESP_PARTITION_SUBTYPE_APP_OTA_1
-                                                            : ESP_PARTITION_SUBTYPE_APP_OTA_0;
+  const esp_partition_subtype_t otherSubtype = (running->subtype == ESP_PARTITION_SUBTYPE_APP_OTA_0)
+                                                   ? ESP_PARTITION_SUBTYPE_APP_OTA_1
+                                                   : ESP_PARTITION_SUBTYPE_APP_OTA_0;
   return esp_partition_find_first(ESP_PARTITION_TYPE_APP, otherSubtype, NULL);
 }
 
@@ -296,8 +296,7 @@ static void switchToOtherOtaApp() {
     LOG_ERR("BOOT", "No app partition found in other OTA slot");
     return;
   }
-  LOG_INF("BOOT", "Switching to app in OTA slot %d",
-          target->subtype - ESP_PARTITION_SUBTYPE_APP_OTA_0);
+  LOG_INF("BOOT", "Switching to app in OTA slot %d", target->subtype - ESP_PARTITION_SUBTYPE_APP_OTA_0);
   if (ota_boot::switchTo(target)) {
     ESP.restart();  // intentional recovery flow: reboot into the other app
   }
@@ -324,7 +323,7 @@ void appendHomeMenuItems(HomeMenuEntries& items, bool hasOpdsServers, bool hasRe
   if (const char* dualBootName = getDualBootAppName()) {
     // Static buffer: menu entries hold a const char* that must outlive this scope
     static char switchLabel[64];
-    snprintf(switchLabel, sizeof(switchLabel), "Switch to %s", dualBootName);
+    snprintf(switchLabel, sizeof(switchLabel), tr(STR_SWITCH_TO_APP), dualBootName);
     items.push({switchLabel, Transfer, HomeMenuAction::SwitchApp});
   }
 

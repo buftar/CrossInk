@@ -126,7 +126,9 @@ void SdFirmwareUpdateActivity::promptConfirmation() {
   const std::string foreignName = ota_boot::getForeignAppName(esp_ota_get_next_update_partition(nullptr));
   if (!foreignName.empty()) {
     LOG_INF("FW", "SD update guard: foreign app \"%s\" in target slot", foreignName.c_str());
-    heading = "Overwrite " + foreignName + "?";
+    char overwritePrompt[96];
+    snprintf(overwritePrompt, sizeof(overwritePrompt), tr(STR_FIRMWARE_OVERWRITE_APP_PROMPT), foreignName.c_str());
+    heading = overwritePrompt;
   }
   // Use the basename only to keep the body short.
   std::string body = firmwarePath;

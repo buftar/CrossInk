@@ -7,6 +7,7 @@
 ### Fixed
 
 - Dual-boot switch entry now works when selected: the action was dispatched from the wrong Home menu path and previously did nothing. Also fixed missing `esp_ota_ops.h` includes that prevented the dual-boot code from compiling, and a dangling string view in the partner-app name lookup.
+- SD Card Firmware Update no longer loops forever on the dual-boot overwrite warning: confirming re-ran the same guard check, which immediately re-detected the sibling app and re-showed the warning instead of proceeding.
 
 ## [v1.6.0] - 2026-09-21
 

@@ -1,0 +1,18 @@
+name: Sync main with upstream
+
+on:
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Merge upstream into main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh api -X POST "repos/${{ github.repository }}/merge-upstream" -f branch=main

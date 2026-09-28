@@ -9,8 +9,6 @@
 #include <I18n.h>
 #include <Memory.h>
 #include <MemoryBudget.h>
-#include <Preferences.h>
-#include <esp_app_format.h>
 #include <esp_ota_ops.h>
 #include <esp_partition.h>
 #include "network/OtaBootSwitch.h"
@@ -270,77 +268,42 @@ const char* savedItemsLabel(bool hasBookmarks, bool hasClippings) {
 }
 
 // ============================================================================
-// Dual-boot: detect foreign app in other OTA slot
-// Fills `out` with the display name of the other app; returns false if none.
-// Zero heap cost when absent (stack-only, aside from NVS read).
+// Dual-boot: the partner OTA slot (the one this app isn't running from).
 // ============================================================================
+static const esp_partition_t* getOtherOtaPartition() {
+  const esp_partition_t* running = esp_ota_get_running_partition();
+  if (!running) return nullptr;
+  const esp_partition_subtype_t otherSubtype =
+      (running->subtype == ESP_PARTITION_SUBTYPE_APP_OTA_0) ? ESP_PARTITION_SUBTYPE_APP_OTA_1
+                                                            : ESP_PARTITION_SUBTYPE_APP_OTA_0;
+  return esp_partition_find_first(ESP_PARTITION_TYPE_APP, otherSubtype, NULL);
+}
+
+// Fills `out` with the display name of the app in the other OTA slot; returns
+// false if that slot is empty or holds our own app. Delegates the actual
+// lookup to ota_boot::getForeignAppName (src/network/OtaBootSwitch.cpp) —
+// the OTA update guard uses the same function, don't reimplement it here.
 static bool getDualBootAppName(char* out, size_t outLen) {
   if (!out || outLen == 0) return false;
   out[0] = '\0';
 
-  const esp_partition_t* running = esp_ota_get_running_partition();
-  if (!running) return false;
-
-  char ownName[32] = {0};
-  {
-    esp_app_desc_t desc;
-    if (esp_ota_get_partition_description(running, &desc) == ESP_OK) {
-      snprintf(ownName, sizeof(ownName), "%s", desc.project_name);
-    }
-  }
-
-  Preferences otaPrefs;
-  const bool prefsOk = otaPrefs.begin("ota_names", true);  // read-only
-
-  bool found = false;
-  esp_partition_iterator_t it = esp_partition_find(ESP_PARTITION_TYPE_APP,
-                                                    ESP_PARTITION_SUBTYPE_ANY, NULL);
-  while (it != NULL) {
-    const esp_partition_t* part = esp_partition_get(it);
-    if (part && part != running
-        && part->subtype >= ESP_PARTITION_SUBTYPE_APP_OTA_0
-        && part->subtype <= ESP_PARTITION_SUBTYPE_APP_OTA_15) {
-      esp_app_desc_t desc;
-      if (esp_ota_get_partition_description(part, &desc) == ESP_OK) {
-        // Check if this is a different app
-        if (strncmp(ownName, desc.project_name, sizeof(ownName)) != 0) {
-          int slot = part->subtype - ESP_PARTITION_SUBTYPE_APP_OTA_0;
-          char key[8];
-          snprintf(key, sizeof(key), "ota_%d", slot);
-          String nvsName = prefsOk ? otaPrefs.getString(key, "") : String();
-          if (nvsName.length() > 0) {
-            snprintf(out, outLen, "%s", nvsName.c_str());
-          } else {
-            snprintf(out, outLen, "%s", desc.project_name);
-          }
-          found = true;
-          break;
-        }
-      }
-    }
-    it = esp_partition_next(it);
-  }
-  esp_partition_iterator_release(it);
-  if (prefsOk) otaPrefs.end();
-  return found;
+  const std::string name = ota_boot::getForeignAppName(getOtherOtaPartition());
+  if (name.empty()) return false;
+  snprintf(out, outLen, "%s", name.c_str());
+  return true;
 }
 
 // Dual-boot: reboot into the app occupying the other OTA slot.
 // Raw otadata write (ota_boot::switchTo) — esp_ota_set_boot_partition's image
 // verification is unreliable on X3 silicon.
 static void switchToOtherOtaApp() {
-  const esp_partition_t* running = esp_ota_get_running_partition();
-  if (!running) return;
-  const esp_partition_subtype_t otherSubtype =
-      (running->subtype == ESP_PARTITION_SUBTYPE_APP_OTA_0) ? ESP_PARTITION_SUBTYPE_APP_OTA_1
-                                                            : ESP_PARTITION_SUBTYPE_APP_OTA_0;
-  const esp_partition_t* target =
-      esp_partition_find_first(ESP_PARTITION_TYPE_APP, otherSubtype, NULL);
+  const esp_partition_t* target = getOtherOtaPartition();
   if (!target) {
     LOG_ERR("BOOT", "No app partition found in other OTA slot");
     return;
   }
-  LOG_INF("BOOT", "Switching to app in OTA slot %d", otherSubtype - ESP_PARTITION_SUBTYPE_APP_OTA_0);
+  LOG_INF("BOOT", "Switching to app in OTA slot %d",
+          target->subtype - ESP_PARTITION_SUBTYPE_APP_OTA_0);
   if (ota_boot::switchTo(target)) {
     ESP.restart();  // intentional recovery flow: reboot into the other app
   }

@@ -7,7 +7,9 @@
 ### Fixed
 
 - Dual-boot switch entry now works when selected: the action was dispatched from the wrong Home menu path and previously did nothing. Also fixed missing `esp_ota_ops.h` includes that prevented the dual-boot code from compiling, and a dangling string view in the partner-app name lookup.
-- SD Card Firmware Update no longer loops forever on the dual-boot overwrite warning: confirming re-ran the same guard check, which immediately re-detected the sibling app and re-showed the warning instead of proceeding.
+- SD Card Firmware Update's dual-boot warning is now part of the normal confirmation prompt ("Overwrite MicroSlate?") instead of a second, separate confirm screen that could loop and showed the wrong button labels.
+- Switching apps no longer erases both otadata entries before rewriting them, so a power loss mid-switch can't leave the device with no valid boot selection.
+- The Home screen looks up the other slot's app name once instead of re-reading flash and NVS on every loop tick.
 
 ## [v1.6.0] - 2026-09-21
 

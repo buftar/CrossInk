@@ -69,35 +69,16 @@ bool switchTo(const esp_partition_t* dest) {
   next.crc = computeSeqCrc(next.ota_seq);
 
   // Write to the OTHER slot (so the bootloader sees a higher seq there).
-  // Standard ESP-IDF otadata layout: two sector-aligned entries at offsets 0
-  // and SPI_FLASH_SEC_SIZE, matching the read above and what the bootloader
-  // itself consults.
   const int targetSlot = (activeIdx == 0) ? 1 : 0;
   const size_t targetOff = static_cast<size_t>(targetSlot) * SPI_FLASH_SEC_SIZE;
 
-  // Erase the full partition since we can't erase a single sector-entry pair
-  // independently; esp_partition_erase_range requires sector-aligned addresses.
-  if (esp_partition_erase_range(otadata, 0, otadata->size) != ESP_OK) {
-    LOG_ERR("BOOT", "otadata erase failed");
+  if (esp_partition_erase_range(otadata, targetOff, SPI_FLASH_SEC_SIZE) != ESP_OK) {
+    LOG_ERR("BOOT", "otadata erase failed (slot=%d)", targetSlot);
     return false;
   }
-
-  // Rewrite BOTH slots: the active one (restored) and the target (new).
-  // After a full erase both slots are 0xFF, so we must write both.
-  for (int i = 0; i < 2; ++i) {
-    size_t off = static_cast<size_t>(i) * SPI_FLASH_SEC_SIZE;
-    if (i == targetSlot) {
-      if (esp_partition_write(otadata, off, &next, sizeof(next)) != ESP_OK) {
-        LOG_ERR("BOOT", "otadata write failed (slot=%d)", targetSlot);
-        return false;
-      }
-    } else {
-      // Restore the active slot
-      if (esp_partition_write(otadata, off, &slots[i], sizeof(SelectEntry)) != ESP_OK) {
-        LOG_ERR("BOOT", "otadata write failed (restore slot=%d)", i);
-        return false;
-      }
-    }
+  if (esp_partition_write(otadata, targetOff, &next, sizeof(next)) != ESP_OK) {
+    LOG_ERR("BOOT", "otadata write failed (slot=%d)", targetSlot);
+    return false;
   }
 
   LOG_INF("BOOT", "otadata: wrote slot=%d seq=%u crc=0x%08x -> %s", targetSlot, static_cast<unsigned>(newSeq),

@@ -122,6 +122,12 @@ void SdFirmwareUpdateActivity::promptConfirmation() {
   }
   // Show "Update firmware?" with the file path as the body line.
   std::string heading = tr(STR_FIRMWARE_UPDATE_PROMPT);
+  // Dual-boot guard: the target slot may hold the sibling app; say so up front.
+  const std::string foreignName = ota_boot::getForeignAppName(esp_ota_get_next_update_partition(nullptr));
+  if (!foreignName.empty()) {
+    LOG_INF("FW", "SD update guard: foreign app \"%s\" in target slot", foreignName.c_str());
+    heading = "Overwrite " + foreignName + "?";
+  }
   // Use the basename only to keep the body short.
   std::string body = firmwarePath;
   const auto pos = body.find_last_of('/');
@@ -152,7 +158,7 @@ void SdFirmwareUpdateActivity::onConfirmationResult(const ActivityResult& result
   performUpdate();
 }
 
-void SdFirmwareUpdateActivity::performUpdate(bool skipGuardCheck) {
+void SdFirmwareUpdateActivity::performUpdate() {
   LOG_INF("FW", "SD update: %s (%u bytes)", firmwarePath.c_str(), static_cast<unsigned>(firmwareSize));
 
   auto progressCb = +[](size_t written, size_t total, void* ctx) {
@@ -168,25 +174,6 @@ void SdFirmwareUpdateActivity::performUpdate(bool skipGuardCheck) {
   // pre-confirmation pass. The alreadyValidated parameter on the API stays
   // for callers (e.g. an OTA staging path) where the same byte stream was
   // just hashed and there's no removable-media gap.
-
-  // Dual-boot guard: warn if the target slot holds a sibling app. Skipped on
-  // retry after the user already confirmed once — otherwise this re-detects
-  // the same foreign app (nothing has been flashed yet) and loops back into
-  // GUARD_CONFIRM forever, so Confirm can never actually proceed.
-  const esp_partition_t* dest = esp_ota_get_next_update_partition(nullptr);
-  if (dest && !skipGuardCheck) {
-    auto foreignName = ota_boot::getForeignAppName(dest);
-    if (!foreignName.empty()) {
-      LOG_INF("FW", "SD update guard: foreign app \"%s\" in target slot", foreignName.c_str());
-      // Store foreign app name and transition to guard-confirm state
-      strncpy(foreignAppName, foreignName.c_str(), sizeof(foreignAppName) - 1);
-      foreignAppName[sizeof(foreignAppName) - 1] = '\0';
-      { RenderLock lock(*this); state = State::GUARD_CONFIRM; }
-      requestUpdate();
-      return;
-    }
-  }
-
   const auto result = firmware_flash::flashFromSdPath(firmwarePath.c_str(), progressCb, this);
   if (result != firmware_flash::Result::OK) {
     LOG_ERR("FW", "flash failed: %s", firmware_flash::resultName(result));
@@ -210,23 +197,6 @@ void SdFirmwareUpdateActivity::performUpdate(bool skipGuardCheck) {
 }
 
 void SdFirmwareUpdateActivity::loop() {
-  if (state == State::GUARD_CONFIRM) {
-    if (mappedInput.wasPressed(MappedInputManager::Button::Confirm)) {
-      // User confirmed — proceed with update
-      LOG_INF("FW", "SD update guard: user confirmed overwrite of \"%s\"", foreignAppName);
-      strncpy(foreignAppName, "", sizeof(foreignAppName));
-      performUpdate(/*skipGuardCheck=*/true);
-      return;
-    }
-    if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
-      // User cancelled — go back to idle
-      LOG_INF("FW", "SD update guard: user cancelled");
-      strncpy(foreignAppName, "", sizeof(foreignAppName));
-      { RenderLock lock(*this); state = State::PICKING; }
-      requestUpdate();
-      return;
-    }
-  }
   if (state == State::FAILED) {
     int x = 0;
     int y = 0;
@@ -263,13 +233,7 @@ void SdFirmwareUpdateActivity::render(RenderLock&&) {
   const auto top = (pageHeight - lineHeight) / 2;
   const Rect textArea{metrics.contentSidePadding, 0, pageWidth - metrics.contentSidePadding * 2, pageHeight};
 
-  if (state == State::GUARD_CONFIRM) {
-    char msg[160];
-    snprintf(msg, sizeof(msg), "This will overwrite %s\n\nContinue?", foreignAppName);
-    renderer.drawCenteredText(UI_10_FONT_ID, top - lineHeight, msg, true, EpdFontFamily::BOLD);
-    int y = top + lineHeight;
-    renderer.drawCenteredText(UI_10_FONT_ID, y, "Enter: Confirm   Esc: Cancel");
-  } else if (state == State::VALIDATING) {
+  if (state == State::VALIDATING) {
     renderer.drawCenteredText(UI_10_FONT_ID, top, tr(STR_VALIDATING_FIRMWARE));
   } else if (state == State::UPDATING) {
     // Throttle redraws to once per percent.

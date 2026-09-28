@@ -279,18 +279,12 @@ static const esp_partition_t* getOtherOtaPartition() {
   return esp_partition_find_first(ESP_PARTITION_TYPE_APP, otherSubtype, NULL);
 }
 
-// Fills `out` with the display name of the app in the other OTA slot; returns
-// false if that slot is empty or holds our own app. Delegates the actual
-// lookup to ota_boot::getForeignAppName (src/network/OtaBootSwitch.cpp) —
-// the OTA update guard uses the same function, don't reimplement it here.
-static bool getDualBootAppName(char* out, size_t outLen) {
-  if (!out || outLen == 0) return false;
-  out[0] = '\0';
-
-  const std::string name = ota_boot::getForeignAppName(getOtherOtaPartition());
-  if (name.empty()) return false;
-  snprintf(out, outLen, "%s", name.c_str());
-  return true;
+// Display name of the app in the other OTA slot, or nullptr if that slot is
+// empty or holds our own app. Slot contents only change via flash + reboot,
+// so the lookup (flash read + NVS open) runs once, not on every loop tick.
+static const char* getDualBootAppName() {
+  static const std::string name = ota_boot::getForeignAppName(getOtherOtaPartition());
+  return name.empty() ? nullptr : name.c_str();
 }
 
 // Dual-boot: reboot into the app occupying the other OTA slot.
@@ -327,8 +321,7 @@ void appendHomeMenuItems(HomeMenuEntries& items, bool hasOpdsServers, bool hasRe
   items.push({tr(STR_FILE_TRANSFER), Transfer, HomeMenuAction::FileTransfer});
 
   // Dual-boot: show switch entry when another app is detected in the other OTA slot
-  char dualBootName[40];
-  if (getDualBootAppName(dualBootName, sizeof(dualBootName))) {
+  if (const char* dualBootName = getDualBootAppName()) {
     // Static buffer: menu entries hold a const char* that must outlive this scope
     static char switchLabel[64];
     snprintf(switchLabel, sizeof(switchLabel), "Switch to %s", dualBootName);
@@ -675,8 +668,7 @@ int HomeActivity::getMenuItemCount() const {
   if (hasBookmarks || hasClippings) {
     count++;
   }
-  char dualBootName[40];
-  if (getDualBootAppName(dualBootName, sizeof(dualBootName))) {
+  if (getDualBootAppName()) {
     count++;
   }
   return count;

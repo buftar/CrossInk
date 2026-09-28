@@ -1,7 +1,6 @@
 #pragma once
 
 #include <esp_partition.h>
-#include <Preferences.h>
 
 #include <cstddef>
 #include <cstdint>

@@ -13,7 +13,6 @@
 #include <Utf8.h>
 #include <Xtc.h>
 #include <esp_ota_ops.h>
-#include <esp_partition.h>
 
 #include <algorithm>
 #include <array>
@@ -43,6 +42,7 @@
 #include "components/themes/lyra/LyraCarouselTheme.h"
 #include "components/themes/minimal/MinimalTheme.h"
 #include "fontIds.h"
+#include "network/ForeignApp.h"
 #include "network/OtaBootSwitch.h"
 
 namespace {
@@ -267,23 +267,11 @@ const char* savedItemsLabel(bool hasBookmarks, bool hasClippings) {
   return tr(STR_BOOKMARKS);
 }
 
-// ============================================================================
-// Dual-boot: the partner OTA slot (the one this app isn't running from).
-// ============================================================================
-static const esp_partition_t* getOtherOtaPartition() {
-  const esp_partition_t* running = esp_ota_get_running_partition();
-  if (!running) return nullptr;
-  const esp_partition_subtype_t otherSubtype = (running->subtype == ESP_PARTITION_SUBTYPE_APP_OTA_0)
-                                                   ? ESP_PARTITION_SUBTYPE_APP_OTA_1
-                                                   : ESP_PARTITION_SUBTYPE_APP_OTA_0;
-  return esp_partition_find_first(ESP_PARTITION_TYPE_APP, otherSubtype, NULL);
-}
-
 // Display name of the app in the other OTA slot, or nullptr if that slot is
 // empty or holds our own app. Slot contents only change via flash + reboot,
 // so the lookup (flash read + NVS open) runs once, not on every loop tick.
 static const char* getDualBootAppName() {
-  static const std::string name = ota_boot::getForeignAppName(getOtherOtaPartition());
+  static const std::string name = ota_boot::getForeignAppName(esp_ota_get_next_update_partition(nullptr));
   return name.empty() ? nullptr : name.c_str();
 }
 
@@ -291,7 +279,8 @@ static const char* getDualBootAppName() {
 // Raw otadata write (ota_boot::switchTo) — esp_ota_set_boot_partition's image
 // verification is unreliable on X3 silicon.
 static void switchToOtherOtaApp() {
-  const esp_partition_t* target = getOtherOtaPartition();
+  // With two OTA slots, the next update partition is the other app's slot.
+  const esp_partition_t* target = esp_ota_get_next_update_partition(nullptr);
   if (!target) {
     LOG_ERR("BOOT", "No app partition found in other OTA slot");
     return;

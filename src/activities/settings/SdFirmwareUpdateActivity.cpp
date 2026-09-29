@@ -14,7 +14,7 @@
 #include "components/UITheme.h"
 #include "fontIds.h"
 #include "network/FirmwareFlasher.h"
-#include "network/OtaBootSwitch.h"
+#include "network/ForeignApp.h"
 
 void SdFirmwareUpdateActivity::onEnter() {
   Activity::onEnter();

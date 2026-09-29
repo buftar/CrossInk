@@ -19,7 +19,7 @@ OtaUpdater::OtaUpdaterError OtaUpdater::installUpdate(ProgressCallback, void*, s
 
 #include "AppVersion.h"
 #include "FirmwareFlasher.h"
-#include "OtaBootSwitch.h"
+#include "ForeignApp.h"
 #include "OtaUpdater.h"
 #include "esp_http_client.h"
 #include "esp_ota_ops.h"

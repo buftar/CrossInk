@@ -13,6 +13,7 @@
 - The Home screen looks up the other slot's app name once instead of re-reading flash and NVS on every loop tick.
 - (X3 fork) Built-in font glyphs no longer store a bitmap length that follows from their size, shrinking the firmware by about 130 KB; .cpfont files are unchanged (adapted from CrossPoint #4206).
 - (X3 fork) When an SD font page's glyph bitmaps don't fit in memory, the reader frees the cached character widths of that font, then of every SD font, and retries before giving up on the page (adapted from CrossPoint #4112).
+- (X3 fork) Text styled slightly smaller than the body (for example 0.925em) keeps the selected font size instead of stepping one size down: CSS sizes now pick the nearest installed size, ties going larger, and SD content sizes are chosen the same way. Existing EPUB layouts rebuild once (uxjulia/CrossInk#954).
 
 ## [v2.0.0] - 2026-11-04
 

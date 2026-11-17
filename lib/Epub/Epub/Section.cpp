@@ -44,7 +44,8 @@ constexpr uint32_t SECTION_CACHE_MAGIC = 0x535843FF;  // bytes: 0xFF, "CXS"
 // v106: Persist per-word source ranges for stable clipping anchors.
 // v107: Lay out chapter heading groups with their publisher spacing and alignment.
 // v108: Runtime outline advances defer rounding until pixel placement.
-constexpr uint8_t SECTION_FILE_VERSION = 108;
+// v109 (X3 fork): CSS sizes pick the nearest installed bitmap size (ties grow) instead of rounding down.
+constexpr uint8_t SECTION_FILE_VERSION = 109;
 // Suspended incremental build: valid pages plus LUTs and a parse-watermark trailer.
 // Change this with layout or payload changes so stale partial pages cannot resume
 // under a different layout contract.

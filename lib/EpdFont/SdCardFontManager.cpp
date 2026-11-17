@@ -122,18 +122,15 @@ void SdCardFontManager::loadContentSizes(const SdCardFontFamilyInfo& family, Gfx
   constexpr size_t FREE_RESERVE = 96U * 1024U;
   constexpr size_t BLOCK_RESERVE = 48U * 1024U;
   for (const uint8_t target : contentSizeTargetsForBody(loadedPointSize_)) {
-    const auto* file = family.findClosestFile(target);
-    // Match the renderer's growth tie-break. Body selection still prefers the
-    // smaller file, but a 13pt heading with only 12/14pt files should use 14pt.
-    if (target > loadedPointSize_) {
-      file = nullptr;
-      for (const auto& candidate : family.files) {
-        if (candidate.style != 0 || candidate.pointSize < 8 || candidate.pointSize > 44) continue;
-        const int distance = std::abs(int(candidate.pointSize) - int(target));
-        const int bestDistance = file ? std::abs(int(file->pointSize) - int(target)) : 256;
-        if (distance < bestDistance || (distance == bestDistance && candidate.pointSize > file->pointSize))
-          file = &candidate;
-      }
+    // Match the renderer's nearest/ties-grow pick in both directions, so a loaded
+    // content size is one the renderer will actually choose (13pt with 12/14pt files -> 14pt).
+    const SdCardFontFileInfo* file = nullptr;
+    for (const auto& candidate : family.files) {
+      if (candidate.style != 0 || candidate.pointSize < 8 || candidate.pointSize > 44) continue;
+      const int distance = std::abs(int(candidate.pointSize) - int(target));
+      const int bestDistance = file ? std::abs(int(file->pointSize) - int(target)) : 256;
+      if (distance < bestDistance || (distance == bestDistance && candidate.pointSize > file->pointSize))
+        file = &candidate;
     }
     if (!file || file->pointSize < 8 || file->pointSize > 44) continue;
     bool present = false;

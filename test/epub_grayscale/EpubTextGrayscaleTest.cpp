@@ -636,3 +636,22 @@ TEST(ReaderRefreshScope, NightTextUsesTheActivePanelsCapabilities) {
   display.overlaySupported = false;
   EXPECT_FALSE(renderer.supportsTextGrayscale());
 }
+
+TEST(EpubTextGrayscaleTest, CssSizesPickTheNearestBitmapSizeAndTiesGrow) {
+  RasterFont f10(10), f12(12), f14(14), f16(16);
+  HalDisplay display(800, 480);
+  GfxRenderer renderer(display);
+  renderer.begin();
+  renderer.insertFont(10, EpdFontFamily(&f10.font).withSize(10, 10));
+  renderer.insertFont(12, EpdFontFamily(&f12.font).withSize(10, 12));
+  renderer.insertFont(14, EpdFontFamily(&f14.font).withSize(10, 14));
+  renderer.insertFont(16, EpdFontFamily(&f16.font).withSize(10, 16));
+  // uxjulia/CrossInk#954: 0.925em of 14pt (13pt) kept 12pt by rounding down; nearest ties grow to 14pt.
+  EXPECT_EQ(renderer.getFontIdForSize(14, 13), 14);
+  EXPECT_EQ(renderer.getFontIdForSize(14, 12), 12);
+  EXPECT_EQ(renderer.getFontIdForSize(14, 11), 12);  // previously 10
+  EXPECT_EQ(renderer.getFontIdForSize(14, 8), 10);
+  EXPECT_EQ(renderer.getFontIdForSize(14, 15), 16);
+  EXPECT_EQ(renderer.getFontIdForSize(14, 44), 16);
+  EXPECT_EQ(renderer.getFontIdForSize(14, 0), 14);
+}

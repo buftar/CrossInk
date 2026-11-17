@@ -23,7 +23,7 @@ extern uint32_t testHyphenationIdentity;
 extern std::vector<BookMetadataCache::TocEntry> testTocEntries;
 
 namespace {
-constexpr uint8_t kFullVersion = 108;
+constexpr uint8_t kFullVersion = 109;
 constexpr uint8_t kPreRoundingFullVersion = 100;
 constexpr uint8_t kPreRoundingPartialVersion = 0xD5;
 constexpr uint8_t kStablePageFullVersion = 99;

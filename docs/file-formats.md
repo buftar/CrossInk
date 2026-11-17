@@ -1121,7 +1121,14 @@ clippings, progress or statistics. The PXC byte layout itself is unchanged.
 
 ## `section.bin`
 
-### Version 108 (current development)
+### Version 109 (X3 fork)
+
+Complete caches use `109`. Layouts rebuild once because CSS font sizes now pick
+the nearest installed bitmap size (ties grow) instead of rounding down, so text
+styled slightly below 1em keeps the selected body size. The binary payload is
+unchanged.
+
+### Version 108
 
 Complete caches use `108` and suspended partial caches use `0xDD`. Both rebuild
 automatically because runtime TrueType/OpenType advances no longer round up

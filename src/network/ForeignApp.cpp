@@ -25,6 +25,8 @@ std::string getForeignAppName(const esp_partition_t* target) {
   }
 
   // Different app — look up the display name from ota_names NVS
+  // shortcut: the name is keyed by slot, so a third app SD-flashed into this slot shows the old app's name until
+  // it registers itself; upgrade if anything besides CrossInk/MicroSlate is ever installed here.
   int slot = target->subtype - ESP_PARTITION_SUBTYPE_APP_OTA_0;
   char key[8];
   snprintf(key, sizeof(key), "ota_%d", slot);

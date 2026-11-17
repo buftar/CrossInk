@@ -12,6 +12,7 @@
 #include <Serialization.h>
 #include <Utf8.h>
 #include <Xtc.h>
+#include <esp_ota_ops.h>
 
 #include <algorithm>
 #include <array>
@@ -40,6 +41,8 @@
 #include "components/themes/lyra/LyraCarouselTheme.h"
 #include "components/themes/minimal/MinimalTheme.h"
 #include "fontIds.h"
+#include "network/ForeignApp.h"
+#include "network/OtaBootSwitch.h"
 
 namespace {
 constexpr uint32_t CAROUSEL_CACHE_MAGIC = 0x43434152;  // "CCAR"
@@ -62,6 +65,7 @@ enum class HomeMenuAction {
   Bookmarks,
   FileTransfer,
   Settings,
+  SwitchApp,  // Dual-boot: switch to app in other OTA slot
 };
 
 struct HomeMenuEntry {
@@ -71,7 +75,7 @@ struct HomeMenuEntry {
 };
 
 struct HomeMenuEntries {
-  static constexpr int kCapacity = 8;
+  static constexpr int kCapacity = 9;
   std::array<HomeMenuEntry, kCapacity> entries{};
   int count = 0;
 
@@ -232,6 +236,30 @@ const char* savedItemsLabel(bool hasBookmarks, bool hasClippings) {
   return tr(STR_BOOKMARKS);
 }
 
+// Display name of the app in the other OTA slot, or nullptr if that slot is
+// empty or holds our own app. Slot contents only change via flash + reboot,
+// so the lookup (flash read + NVS open) runs once, not on every loop tick.
+static const char* getDualBootAppName() {
+  static const std::string name = ota_boot::getForeignAppName(esp_ota_get_next_update_partition(nullptr));
+  return name.empty() ? nullptr : name.c_str();
+}
+
+// Dual-boot: reboot into the app occupying the other OTA slot.
+// Raw otadata write (ota_boot::switchTo) — esp_ota_set_boot_partition's image
+// verification is unreliable on X3 silicon.
+static void switchToOtherOtaApp() {
+  // With two OTA slots, the next update partition is the other app's slot.
+  const esp_partition_t* target = esp_ota_get_next_update_partition(nullptr);
+  if (!target) {
+    LOG_ERR("BOOT", "No app partition found in other OTA slot");
+    return;
+  }
+  LOG_INF("BOOT", "Switching to app in OTA slot %d", target->subtype - ESP_PARTITION_SUBTYPE_APP_OTA_0);
+  if (ota_boot::switchTo(target)) {
+    ESP.restart();  // intentional recovery flow: reboot into the other app
+  }
+}
+
 void appendHomeMenuItems(HomeMenuEntries& items, bool hasPlugins, bool hasReadingStats, bool hasBookmarks,
                          bool hasClippings) {
   items.push({tr(STR_BROWSE_FILES), Folder, HomeMenuAction::BrowseFiles});
@@ -248,6 +276,15 @@ void appendHomeMenuItems(HomeMenuEntries& items, bool hasPlugins, bool hasReadin
   }
 
   items.push({tr(STR_FILE_TRANSFER), Transfer, HomeMenuAction::FileTransfer});
+
+  // Dual-boot: show switch entry when another app is detected in the other OTA slot
+  if (const char* dualBootName = getDualBootAppName()) {
+    // Static buffer: menu entries hold a const char* that must outlive this scope
+    static char switchLabel[64];
+    snprintf(switchLabel, sizeof(switchLabel), tr(STR_SWITCH_TO_APP), dualBootName);
+    items.push({switchLabel, Transfer, HomeMenuAction::SwitchApp});
+  }
+
   items.push({tr(STR_SETTINGS_TITLE), Settings, HomeMenuAction::Settings});
 }
 
@@ -519,6 +556,9 @@ int HomeActivity::getMenuItemCount() const {
     count++;
   }
   if (hasBookmarks || hasClippings) {
+    count++;
+  }
+  if (getDualBootAppName()) {
     count++;
   }
   return count;
@@ -1473,6 +1513,9 @@ void HomeActivity::loop() {
           case HomeMenuAction::ContinueReading:
           case HomeMenuAction::Settings:
             break;
+          case HomeMenuAction::SwitchApp:
+            // Dual-boot entry is only built into the full home menu, not this one
+            break;
         }
       };
 
@@ -1716,6 +1759,9 @@ void HomeActivity::loop() {
         break;
       case HomeMenuAction::Settings:
         onSettingsOpen();
+        break;
+      case HomeMenuAction::SwitchApp:
+        switchToOtherOtaApp();
         break;
     }
   };

@@ -52,11 +52,12 @@ constexpr uint32_t SECTION_CACHE_MAGIC = 0x535843FF;  // bytes: 0xFF, "CXS"
 // v114: Lower ruled text by a pixel while preserving descender clearance.
 // v115: Center the main letter body between rules independently of descenders.
 // v118: Block spans affect pagination and word sizes carry inline paint flags.
-constexpr uint8_t SECTION_FILE_VERSION = 118;
+// v119 (X3 fork): CSS sizes pick the nearest installed bitmap size (ties grow) instead of rounding down.
+constexpr uint8_t SECTION_FILE_VERSION = 119;
 // Suspended incremental build: valid pages plus LUTs and a parse-watermark trailer.
 // Change this with layout or payload changes so stale partial pages cannot resume
 // under a different layout contract.
-constexpr uint8_t SECTION_FILE_PARTIAL_VERSION = 0xE7;
+constexpr uint8_t SECTION_FILE_PARTIAL_VERSION = 0xE8;
 constexpr uint32_t HEADER_SIZE =
     sizeof(bool) + 4 * sizeof(uint32_t) + sizeof(PublisherFonts) + sizeof(SECTION_CACHE_MAGIC) + sizeof(uint8_t) +
     sizeof(int) + sizeof(float) + sizeof(bool) + sizeof(bool) + sizeof(uint8_t) + sizeof(uint16_t) + sizeof(uint16_t) +

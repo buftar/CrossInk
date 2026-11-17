@@ -140,21 +140,16 @@ std::array<const SdCardFontFileInfo*, 2> SdCardFontManager::selectContentFiles(
   for (size_t i = 0; i < targets.size(); ++i) {
     const auto target = targets[i];
     if (!target) continue;
-    const auto* file = family.findClosestFile(target);
-#if CROSSINK_SCALABLE_FONTS
-    // Match the renderer's growth tie-break. Body selection still prefers the
-    // smaller file, but a 13pt heading with only 12/14pt files should use 14pt.
-    if (target > loadedPointSize_) {
-      file = nullptr;
-      for (const auto& candidate : family.files) {
-        if (candidate.style != 0 || candidate.pointSize < 8 || candidate.pointSize > 44) continue;
-        const int distance = std::abs(int(candidate.pointSize) - int(target));
-        const int bestDistance = file ? std::abs(int(file->pointSize) - int(target)) : 256;
-        if (distance < bestDistance || (distance == bestDistance && candidate.pointSize > file->pointSize))
-          file = &candidate;
-      }
+    // X3 fork (uxjulia/CrossInk#954): match the renderer's nearest/ties-grow pick in both directions,
+    // so a loaded content size is one the renderer will choose (13pt with 12/14pt files -> 14pt).
+    const SdCardFontFileInfo* file = nullptr;
+    for (const auto& candidate : family.files) {
+      if (candidate.style != 0 || candidate.pointSize < 8 || candidate.pointSize > 44) continue;
+      const int distance = std::abs(int(candidate.pointSize) - int(target));
+      const int bestDistance = file ? std::abs(int(file->pointSize) - int(target)) : 256;
+      if (distance < bestDistance || (distance == bestDistance && candidate.pointSize > file->pointSize))
+        file = &candidate;
     }
-#endif
     if (!file || file->pointSize < 8 || file->pointSize > 44 || file->pointSize == loadedPointSize_) continue;
     if (i && files[0] && files[0]->pointSize == file->pointSize) continue;
     files[i] = file;

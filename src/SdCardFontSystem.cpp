@@ -541,7 +541,7 @@ int SdCardFontSystem::restoreReaderFont(GfxRenderer& renderer) {
       for (const uint8_t target : manager_.contentSizeTargetsForBody(bodySize)) {
         if (!target) continue;
         if (findInstalledFontFile(familyName, target, FontFileSelection::Closest, path, sizeof(path), selectedPointSize,
-                                  target > bodySize))
+                                  true))
           contentFamily.files.push_back({path, selectedPointSize, 0});
       }
     }

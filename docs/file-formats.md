@@ -1181,7 +1181,13 @@ and at their exact dimensions; mismatches fall back to the source EPUB image.
 
 ## `section.bin`
 
-### Version 118 (current release)
+### Version 119 (X3 fork, current)
+
+Complete sections use `119` and partial sections use `0xE8`. Layouts rebuild once because CSS font sizes
+now pick the nearest installed bitmap size (ties grow) instead of rounding down, so text styled slightly
+below 1em keeps the selected body size. The binary payload is unchanged.
+
+### Version 118
 
 Complete sections use version 118 and partial sections use `0xE7`. Block-styled spans can affect pagination. In the optional per-word font-size byte, bits 0–5 store the point size, bit 6 marks a black background on the preceding space, and bit 7 hides the glyphs while retaining their layout width.
 

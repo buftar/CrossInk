@@ -6587,7 +6587,7 @@ class SimulatorSmokeTest {
       fail("Cannot write heading excerpt");
     Epub book("/cpfont-headings.epub", "/.crosspoint");
     if (!css.loadFromCache()) fail("Cannot load heading CSS");
-    unsigned headings = 0;
+    unsigned headings = 0;  // bit 0: h1 (13pt) laid out, bit 1: h2 (12pt), whatever the wrapping
     ChapterHtmlSlimParser parser(
         book, htmlPath, renderer, body, 1.0f, false, false, 1, 400, 700, false, false, false, 0,
         [&](std::unique_ptr<Page> page, uint16_t, uint16_t, uint32_t, uint32_t) {
@@ -6596,9 +6596,19 @@ class SimulatorSmokeTest {
             const auto& block = *static_cast<const PageLine&>(*element).getBlock();
             if (!block.wordCount()) continue;
             const char* word = block.wordText(0);
-            const unsigned size = !std::strcmp(word, "Chapter") ? 13 : !std::strcmp(word, "Among") ? 12 : 10;
-            if (block.getBlockStyle().fontSize != size) fail("Heading layout used the wrong size");
-            if (size != 10) ++headings;
+            // A wrapped heading line starts with a later heading word, so match every word.
+            const auto in = [word](std::initializer_list<const char*> words) {
+              for (const char* w : words)
+                if (!std::strcmp(word, w)) return true;
+              return false;
+            };
+            const unsigned size = in({"Chapter", "Length"})                       ? 13
+                                  : in({"Among", "Oddly", "Engineered", "Audio"}) ? 12
+                                                                                  : 10;
+            if (block.getBlockStyle().fontSize != size)
+              fail("Heading layout used the wrong size: \"%s\" got %u, expected %u", word,
+                   unsigned(block.getBlockStyle().fontSize), size);
+            if (size != 10) headings |= size == 13 ? 1U : 2U;
           }
           renderer.setRenderMode(GfxRenderer::BW);
           renderer.clearScreen();
@@ -6606,7 +6616,7 @@ class SimulatorSmokeTest {
           captureStatusBarScreen("cpfont-publisher-headings");
         },
         true, "", "", 0, {}, nullptr, &css);
-    if (!parser.parseAndBuildPages() || headings != 2) fail("Publisher heading excerpt did not render");
+    if (!parser.parseAndBuildPages() || headings != 3U) fail("Publisher heading excerpt did not render");
     css.clear();
     sdFontSystem.releaseLoadedFont(renderer);
     sdFontSystem.ensureLoaded(renderer);

@@ -1267,6 +1267,7 @@ void enterDeepSleep(bool fromTimeout) {
 // Dual-boot: register this app's name in shared NVS (MicroSlate convention)
 // ============================================================================
 static void registerDualBootAppName() {
+#ifndef SIMULATOR  // the simulator has no OTA slots or NVS
   const esp_partition_t* self = esp_ota_get_running_partition();
   if (!self) return;
   int slot = self->subtype - ESP_PARTITION_SUBTYPE_APP_OTA_0;
@@ -1278,6 +1279,7 @@ static void registerDualBootAppName() {
     prefs.end();
     LOG_DBG("BOOT", "Registered as \"CrossInk\" in ota_names/ota_%d", slot);
   }
+#endif
 }
 
 void setupDisplayAndFonts(const bool seamless, const bool loadReaderResources, const bool useReaderRenderStack) {

@@ -1058,7 +1058,6 @@ STR_SYNC_MORE_FAILURES_FORMAT: "Ďalších %u neúspešných pokusov"
 STR_CALIBRATION_TOP_CORNERS: "Horné rohy"
 STR_CALIBRATION_BOTTOM_CORNERS: "Dolné rohy"
 STR_CALIBRATION_CORNER_HELP: "Posuňte hodiny a batériu ďalej od rohu alebo zakriveného okraja."
-# Dual-boot fork strings (English until translated)
 STR_SWITCH_TO_APP: "Switch to %s"
 STR_FIRMWARE_OVERWRITE_APP_PROMPT: "Overwrite %s?"
 STR_UPDATE_BLOCKED_OTHER_APP: "Other app in update slot. Update via USB."

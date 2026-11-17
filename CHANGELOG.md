@@ -1,3 +1,17 @@
+## [Unreleased]
+
+### Added
+
+- Dual-boot support: CrossInk registers its name in the shared `ota_names` NVS namespace at boot, and the Home menu shows a "Switch to <app>" entry when another app (e.g. MicroSlate) occupies the other OTA slot. Switching uses raw otadata writes (`ota_boot::switchTo`), which are reliable on X3 silicon where standard image verification is not.
+- (dual-boot fork) Wi-Fi update blocked by the dual-boot guard now says "Other app in update slot. Update via USB." instead of "Update failed".
+
+### Fixed
+
+- Dual-boot switch entry now works when selected: the action was dispatched from the wrong Home menu path and previously did nothing. Also fixed missing `esp_ota_ops.h` includes that prevented the dual-boot code from compiling, and a dangling string view in the partner-app name lookup.
+- SD Card Firmware Update's dual-boot warning is now part of the normal confirmation prompt ("Overwrite MicroSlate?") instead of a second, separate confirm screen that could loop and showed the wrong button labels.
+- Switching apps no longer erases both otadata entries before rewriting them, so a power loss mid-switch can't leave the device with no valid boot selection.
+- The Home screen looks up the other slot's app name once instead of re-reading flash and NVS on every loop tick.
+
 ## [v2.0.0] - 2026-11-04
 
 ### Added

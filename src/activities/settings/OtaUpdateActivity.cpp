@@ -23,6 +23,7 @@ StrId failureMessageFor(const OtaUpdater::OtaUpdaterError error) {
   if (error == OtaUpdater::HASH_MISMATCH_ERROR) return StrId::STR_UPDATE_HASH_MISMATCH;
   if (error == OtaUpdater::WRONG_DEVICE_ERROR) return StrId::STR_FIRMWARE_WRONG_DEVICE;
   if (error == OtaUpdater::SD_CARD_FULL_ERROR) return StrId::STR_SD_CARD_FULL;
+  if (error == OtaUpdater::OTA_UPDATE_GUARD_BLOCKED) return StrId::STR_UPDATE_BLOCKED_OTHER_APP;
   return StrId::STR_UPDATE_FAILED;
 }
 

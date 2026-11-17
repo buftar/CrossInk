@@ -14,6 +14,7 @@
 #include "components/UITheme.h"
 #include "fontIds.h"
 #include "network/FirmwareFlasher.h"
+#include "network/ForeignApp.h"
 
 void SdFirmwareUpdateActivity::onEnter() {
   Activity::onEnter();
@@ -121,6 +122,14 @@ void SdFirmwareUpdateActivity::promptConfirmation() {
   }
   // Show "Update firmware?" with the file path as the body line.
   std::string heading = tr(STR_FIRMWARE_UPDATE_PROMPT);
+  // Dual-boot guard: the target slot may hold the sibling app; say so up front.
+  const std::string foreignName = ota_boot::getForeignAppName(esp_ota_get_next_update_partition(nullptr));
+  if (!foreignName.empty()) {
+    LOG_INF("FW", "SD update guard: foreign app \"%s\" in target slot", foreignName.c_str());
+    char overwritePrompt[96];
+    snprintf(overwritePrompt, sizeof(overwritePrompt), tr(STR_FIRMWARE_OVERWRITE_APP_PROMPT), foreignName.c_str());
+    heading = overwritePrompt;
+  }
   // Use the basename only to keep the body short.
   std::string body = firmwarePath;
   const auto pos = body.find_last_of('/');

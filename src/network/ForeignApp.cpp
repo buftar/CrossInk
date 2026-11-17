@@ -1,5 +1,11 @@
 #include "ForeignApp.h"
 
+#ifdef SIMULATOR
+// The simulator has a single app and no second OTA slot.
+namespace ota_boot {
+std::string getForeignAppName(const esp_partition_t*) { return {}; }
+}  // namespace ota_boot
+#else
 #include <Logging.h>
 #include <Preferences.h>
 #include <esp_app_format.h>
@@ -47,3 +53,4 @@ std::string getForeignAppName(const esp_partition_t* target) {
 }
 
 }  // namespace ota_boot
+#endif  // SIMULATOR

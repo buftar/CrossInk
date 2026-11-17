@@ -11,6 +11,8 @@
 - SD Card Firmware Update's dual-boot warning is now part of the normal confirmation prompt ("Overwrite MicroSlate?") instead of a second, separate confirm screen that could loop and showed the wrong button labels.
 - Switching apps no longer erases both otadata entries before rewriting them, so a power loss mid-switch can't leave the device with no valid boot selection.
 - The Home screen looks up the other slot's app name once instead of re-reading flash and NVS on every loop tick.
+- (X3 fork) Built-in font glyphs no longer store a bitmap length that follows from their size, shrinking the firmware by about 130 KB; .cpfont files are unchanged (adapted from CrossPoint #4206).
+- (X3 fork) When an SD font page's glyph bitmaps don't fit in memory, the reader frees the cached character widths of that font, then of every SD font, and retries before giving up on the page (adapted from CrossPoint #4112).
 
 ## [v2.0.0] - 2026-11-24
 

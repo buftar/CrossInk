@@ -48,12 +48,12 @@ static int testsFailed = 0;
 
 // clang-format off
 static const EpdGlyph kGlyphs[] = {
-  // idx  width  height  advanceX  left  top  dataLength  dataOffset
-  /* 0 ' ' */ { 0,  0,  64, 0,  0, 0, 0 },
-  /* 1 'T' */ { 8, 12, 137, 0, 12, 0, 0 },
-  /* 2 'a' */ { 7,  8, 130, 0,  8, 0, 0 },
-  /* 3 'o' */ { 8,  8, 145, 0,  8, 0, 0 },
-  /* 4 'x' */ { 7,  8, 136, 0,  8, 0, 0 },
+  // idx  width  height  advanceX  left  top  dataOffset
+  /* 0 ' ' */ { 0,  0,  64, 0,  0, 0 },
+  /* 1 'T' */ { 8, 12, 137, 0, 12, 0 },
+  /* 2 'a' */ { 7,  8, 130, 0,  8, 0 },
+  /* 3 'o' */ { 8,  8, 145, 0,  8, 0 },
+  /* 4 'x' */ { 7,  8, 136, 0,  8, 0 },
 };
 
 static const EpdUnicodeInterval kIntervals[] = {
@@ -184,7 +184,7 @@ void testTtfConversionMatchesSingleSnapWithEveryFp4Kern() {
 
 void testTtfConvertedAdvancesDriveTextBounds() {
   const uint16_t advance = static_cast<uint16_t>(fp4::truncate26_6_to_4(670));
-  const EpdGlyph glyphs[] = {{7, 8, advance, 0, 8, 0, 0}, {7, 8, advance, 0, 8, 0, 0}};
+  const EpdGlyph glyphs[] = {{7, 8, advance, 0, 8, 0}, {7, 8, advance, 0, 8, 0}};
   const EpdUnicodeInterval intervals[] = {{'i', 'i', 0}, {'l', 'l', 1}};
   const EpdFontData data = {.glyph = glyphs, .intervals = intervals, .intervalCount = 2};
   const EpdFont font(&data);
@@ -517,10 +517,10 @@ void testFamilySpaceGlyphsStayBlank() {
 void testFamilyInkBounds() {
   printf("testFamilyInkBounds...\n");
   static const EpdGlyph glyphs[] = {
-      {0, 0, 64, 0, 0, 0, 0},    // space
-      {7, 6, 130, 0, 8, 0, 0},   // a: ink ends above the baseline
-      {7, 11, 130, 0, 8, 0, 0},  // g: ink extends below the baseline
-      {3, 3, 0, 0, 10, 0, 0},    // combining acute accent
+      {0, 0, 64, 0, 0, 0},    // space
+      {7, 6, 130, 0, 8, 0},   // a: ink ends above the baseline
+      {7, 11, 130, 0, 8, 0},  // g: ink extends below the baseline
+      {3, 3, 0, 0, 10, 0},    // combining acute accent
   };
   static const EpdUnicodeInterval intervals[] = {
       {0x20, 0x20, 0}, {0x61, 0x61, 1}, {0x67, 0x67, 2}, {0x0301, 0x0301, 3}};

@@ -63,6 +63,12 @@ void FontCacheManager::releaseInactiveSdFontCaches(const int activeFontId) {
   }
 }
 
+void FontCacheManager::releaseSdFontAdvanceTables() {
+  for (auto& [id, font] : sdCardFonts_) {
+    if (font) font->clearPersistentCache();
+  }
+}
+
 bool FontCacheManager::prewarmCache(int fontId, const char* utf8Text, uint8_t styleMask,
                                     const PreparationPolicy policy) {
 #if CROSSINK_SCALABLE_FONTS

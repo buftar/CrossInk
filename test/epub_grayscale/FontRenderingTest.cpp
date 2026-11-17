@@ -39,7 +39,7 @@ struct GroupFont {
     bitmap.reserve(sizes[0] + sizes[1] + sizes[2] + 20);
     for (size_t i = 0; i < glyphs.size(); ++i) {
       // Odd widths require row-aligned -> packed conversion; groups may have padding.
-      glyphs[i] = {5, 1, 80, 0, 1, 2, 0};
+      glyphs[i] = {5, 1, 80, 0, 1, 0};
       const auto compressed = deflate(std::vector<uint8_t>(sizes[i], pattern(i)));
       groups[i] = {static_cast<uint32_t>(bitmap.size()), static_cast<uint32_t>(compressed.size()), sizes[i], 1,
                    static_cast<uint32_t>(i)};
@@ -177,7 +177,7 @@ TEST(FontScratch, CorruptGroupDoesNotPoisonReusedScratch) {
 TEST(FontScratch, HandlesLargestGeneratedGroupAndZeroSizeGlyph) {
   fakeheap::reset(false);
   GroupFont font(false, {65536, 4, 2});
-  font.glyphs[2].width = font.glyphs[2].height = font.glyphs[2].dataLength = 0;
+  font.glyphs[2].width = font.glyphs[2].height = 0;
   FontDecompressor decoder;
   ASSERT_EQ(decoder.prewarmCache(&font.data, "ABC"), 0);
   EXPECT_EQ(fakeheap::internal.attempts, 1u);
@@ -190,9 +190,9 @@ TEST(FontScratch, HandlesLargestGeneratedGroupAndZeroSizeGlyph) {
 TEST(VerticalGlyphBounds, ConsumesOneLookupAndKeepsFallbackMetrics) {
   struct Lookups {
     int calls = 0;
-    EpdGlyph body = {5, 7, 80, 0, 6, 0, 0};
-    EpdGlyph quote = {2, 3, 40, 0, 9, 0, 0};
-    EpdGlyph replacement = {4, 5, 64, 0, 5, 0, 0};
+    EpdGlyph body = {5, 7, 80, 0, 6, 0};
+    EpdGlyph quote = {2, 3, 40, 0, 9, 0};
+    EpdGlyph replacement = {4, 5, 64, 0, 5, 0};
   } lookups;
   EpdFontData data{};
   data.ascender = 10;
@@ -250,7 +250,7 @@ TEST(ScaledFallback, MatchesDrawingFromTheOwningFont) {
   for (int source = 0; source < sourceCount; ++source) {
     const bool compressed = source == 1;
     // Primary A is blank; fallback Z has ink. Identical metrics isolate ownership.
-    EpdGlyph glyph{5, 3, 80, 0, 3, 4, 0};
+    EpdGlyph glyph{5, 3, 80, 0, 3, 0};
     EpdUnicodeInterval primaryInterval{'A', 'A', 0}, fallbackInterval{'Z', 'Z', 0};
     const uint8_t blank[] = {0, 0, 0, 0};
     const uint8_t packed[] = {0xFF, 0xFF, 0xFF, 0xFC};

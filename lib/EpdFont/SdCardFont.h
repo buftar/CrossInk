@@ -22,6 +22,18 @@
 // Reader enforcement: SdCardFont::load().
 #define CPFONT_VERSION 4
 
+// One glyph entry in a .cpfont file (16 bytes, little-endian). Unlike EpdGlyph it stores the
+// bitmap length, which loading checks against the dimensions to reject corrupt entries.
+struct CpfontGlyphRecord {
+  uint8_t width;
+  uint8_t height;
+  uint16_t advanceX;
+  int16_t left;
+  int16_t top;
+  uint16_t dataLength;
+  uint32_t dataOffset;  // offset 12, after 2 bytes of padding
+};
+
 class SdCardFont {
  public:
   static constexpr uint16_t MAX_PAGE_GLYPHS = 512;
@@ -112,6 +124,12 @@ class SdCardFont {
   // Drop the persistent advance cache. Call when unloading the SD font or
   // when font/size/family/glyph-table state changes.
   void clearPersistentCache();
+
+  // Called when a glyph bitmap still cannot be reserved after this font dropped its own
+  // advance tables: another SD font's table can split the largest free block. main.cpp
+  // installs FontCacheManager::releaseSdFontAdvanceTables (adapted from CrossPoint #4112).
+  using AdvanceReleaseHook = void (*)();
+  static void setAdvanceReleaseHook(AdvanceReleaseHook hook) { advanceReleaseHook_ = hook; }
 
   // Returns pointer to the managed EpdFont for a given style.
   // Returns nullptr if the style is not present.
@@ -322,7 +340,7 @@ class SdCardFont {
     bool bitmapValid = false;
     uint16_t bitmapOffset = 0;  // Packed cache offset; uses the entry's existing padding.
   };
-  static_assert(sizeof(ContentMetricsEntry) == 24, "Content metrics must retain their 3KB budget");
+  static_assert(sizeof(ContentMetricsEntry) == 20, "Content metrics must retain their 2.5KB budget (12-byte EpdGlyph, CrossPoint #4206)");
   static constexpr uint32_t CONTENT_METRICS_CACHE_SIZE = 128;
   static constexpr size_t CONTENT_METRICS_CACHE_BYTES = CONTENT_METRICS_CACHE_SIZE * sizeof(ContentMetricsEntry);
   std::unique_ptr<ContentMetricsEntry[]> contentMetrics_;
@@ -348,6 +366,7 @@ class SdCardFont {
   // Keep this conservative: the cache is resident per style, so large caps
   // quickly eat heap on the ESP32-C3.
   static constexpr uint32_t ADVANCE_CACHE_LIMIT = 256;
+  static inline AdvanceReleaseHook advanceReleaseHook_ = nullptr;
   AdvanceEntry* advanceTable_[MAX_STYLES] = {};
   uint32_t advanceTableSize_[MAX_STYLES] = {};
   uint32_t advanceTableCapacity_[MAX_STYLES] = {};
@@ -380,7 +399,9 @@ class SdCardFont {
   void applyKernLigaturePointers(PerStyle& s, EpdFontData& data, bool includeKerning) const;
   void applyGlyphMissCallback(uint8_t styleIdx);
   int32_t findGlobalGlyphIndex(const PerStyle& s, uint32_t codepoint) const;
-  bool glyphEntryValid(const PerStyle& s, const EpdGlyph& glyph, uint32_t codepoint) const;
+  // Converts a .cpfont glyph record. Returns an empty glyph if the record is corrupt: its data
+  // length must match the packed pixel size and its bitmap must lie inside the file.
+  EpdGlyph decodeGlyphRecord(const PerStyle& s, const CpfontGlyphRecord& record, uint32_t codepoint) const;
   int fetchAdvancesForCodepoints(uint32_t* codepoints, uint32_t cpCount, uint8_t styleMask);
   int failPrewarm(int missed);
   template <typename Iter>

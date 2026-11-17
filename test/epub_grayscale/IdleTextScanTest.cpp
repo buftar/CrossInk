@@ -21,7 +21,6 @@ TEST(IdleTextScanTest, RichTextCollectsExactRunsWithoutMetricsKerningOrRasteriza
   font.glyph.height = 7;
   font.glyph.advanceX = 6 * 16;
   font.glyph.top = 7;
-  font.glyph.dataLength = 9;
   EpdFontData data{};
   data.ascender = 8;
   data.advanceY = 10;
@@ -93,7 +92,7 @@ TEST(IdleTextScanTest, StripCullingPreservesPixelsAndSkipsScalableRunWork) {
   fakeheap::reset(true);
   Storage.reset();
   struct Font {
-    EpdGlyph glyph{6, 9, 7 * 16, -2, 8, 14, 0};
+    EpdGlyph glyph{6, 9, 7 * 16, -2, 8, 0};
     uint8_t pixels[14];
     unsigned metrics = 0, raster = 0, kern = 0;
     int rise = 0;
@@ -182,7 +181,7 @@ TEST(IdleTextScanTest, TransientGlyphLookupFailureDoesNotCullRecoveredInk) {
       fakeheap::reset(true);
       Storage.reset();
       struct Font {
-        EpdGlyph glyph{6, 9, 7 * 16, 0, 8, 14, 0};
+        EpdGlyph glyph{6, 9, 7 * 16, 0, 8, 0};
         uint8_t pixels[14];
         bool fail = false;
         uint32_t failingCp = 0;

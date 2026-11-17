@@ -32,7 +32,7 @@ args = parser.parse_args()
 import freetype
 from fontTools.ttLib import TTFont
 
-GlyphProps = namedtuple("GlyphProps", ["width", "height", "advance_x", "left", "top", "data_length", "data_offset", "code_point"])
+GlyphProps = namedtuple("GlyphProps", ["width", "height", "advance_x", "left", "top", "data_offset", "code_point"])
 
 font_stack = [freetype.Face(f) for f in args.fontstack]
 is2Bit = args.is2Bit
@@ -339,7 +339,6 @@ for i_start, i_end in intervals:
                 advance_x = 0,
                 left = 0,
                 top = 0,
-                data_length = 0,
                 data_offset = total_size,
                 code_point = code_point,
             )
@@ -354,7 +353,6 @@ for i_start, i_end in intervals:
                 advance_x = 0,
                 left = 0,
                 top = 0,
-                data_length = 0,
                 data_offset = total_size,
                 code_point = code_point,
             )
@@ -456,7 +454,6 @@ for i_start, i_end in intervals:
             advance_x = fp4_from_ft16_16(face.glyph.linearHoriAdvance),
             left = face.glyph.bitmap_left,
             top = face.glyph.bitmap_top,
-            data_length = len(packed),
             data_offset = total_size,
             code_point = code_point,
         )
@@ -984,7 +981,6 @@ if compress:
                 advance_x=old_props.advance_x,
                 left=old_props.left,
                 top=old_props.top,
-                data_length=old_props.data_length,
                 data_offset=within_group_offset,
                 code_point=old_props.code_point,
             )

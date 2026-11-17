@@ -44,9 +44,9 @@ struct RasterFont {
           g.top = size + 5;
         }
         g.dataOffset = pixels.size();
-        g.dataLength = (g.width * g.height + 3) / 4;
+        const uint32_t glyphBytes = epdGlyphDataLength(g, true);
         glyphs.push_back(g);
-        for (int b = 0; b < g.dataLength; ++b) pixels.push_back(b % 2 ? 0x1B : 0xE4);
+        for (uint32_t b = 0; b < glyphBytes; ++b) pixels.push_back(b % 2 ? 0x1B : 0xE4);
       }
     }
     data.bitmap = pixels.data();
@@ -78,7 +78,12 @@ struct RasterFont {
     put16(47, uint16_t(data.descender));
     put32(56, 64);
     for (auto& i : intervals) append(bytes, i);
-    for (auto& g : glyphs) append(bytes, g);
+    for (auto& g : glyphs) {
+      const CpfontGlyphRecord record{g.width,     g.height, g.advanceX,
+                                     g.left,      g.top,    static_cast<uint16_t>(epdGlyphDataLength(g, true)),
+                                     g.dataOffset};
+      append(bytes, record);
+    }
     bytes.insert(bytes.end(), pixels.begin(), pixels.end());
     return bytes;
   }

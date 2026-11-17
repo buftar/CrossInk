@@ -11,6 +11,7 @@ class SdCardFont {
   };
 
   void clearCache() {}
+  void clearPersistentCache() { clearPersistentCacheCallCount++; }
   void releaseForLowMemory(bool preserveAdvanceTable) {
     releaseForLowMemoryCallCount++;
     lastPreserveAdvanceTable = preserveAdvanceTable;
@@ -29,6 +30,7 @@ class SdCardFont {
   PrewarmCall prewarmCalls[4] = {};
   int prewarmCallCount = 0;
   int releaseForLowMemoryCallCount = 0;
+  int clearPersistentCacheCallCount = 0;
   bool lastPreserveAdvanceTable = true;
   uint8_t resolvedStyles[4] = {0, 1, 2, 3};
 };

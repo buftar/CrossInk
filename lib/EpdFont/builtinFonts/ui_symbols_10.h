@@ -15,7 +15,7 @@ static const uint8_t ui_symbols_10Bitmaps[41] = {
 };
 
 static const EpdGlyph ui_symbols_10Glyphs[] = {
-    { 18, 18, 298, 0, 17, 41, 0 }, // U+23FB
+    { 18, 18, 298, 0, 17, 0 }, // U+23FB
 };
 
 static const EpdUnicodeInterval ui_symbols_10Intervals[] = {

@@ -183,15 +183,8 @@ struct Runtime {
 
     // Keep the final advance + kerning pixel snap from rounding twice.
     // Kerning retains its existing signed rounding below.
-    const auto advance16 =
-        uint16_t(std::clamp<int32_t>(fp4::truncate26_6_to_4(metrics.advance26_6), 0, UINT16_MAX));
-    glyph = {uint8_t(metrics.width),
-             uint8_t(metrics.height),
-             advance16,
-             metrics.left,
-             metrics.top,
-             uint16_t((unsigned(metrics.width) * metrics.height + 3) / 4),
-             glyphOrCodepoint};
+    const auto advance16 = uint16_t(std::clamp<int32_t>(fp4::truncate26_6_to_4(metrics.advance26_6), 0, UINT16_MAX));
+    glyph = {uint8_t(metrics.width), uint8_t(metrics.height), advance16, metrics.left, metrics.top, glyphOrCodepoint};
     entry = {key, glyph};
     return true;
   }

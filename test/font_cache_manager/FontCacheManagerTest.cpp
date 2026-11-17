@@ -76,6 +76,23 @@ TEST(FontCacheManagerTest, ReleasesEveryRebuildableFontCacheBeforeMemoryHeavyWor
   EXPECT_FALSE(fallbackFont.lastPreserveAdvanceTable);
 }
 
+TEST(FontCacheManagerTest, ReleasesOnlyAdvanceTablesOfEverySdFontForABitmapRetry) {
+  SdCardFont readerFont;
+  SdCardFont fallbackFont;
+  FontDecompressor decompressor;
+  const std::map<int, EpdFontFamily> noBuiltinFonts;
+  const std::map<int, SdCardFont*> sdFonts{{-17, &readerFont}, {23, &fallbackFont}};
+  FontCacheManager manager(noBuiltinFonts, sdFonts);
+  manager.setFontDecompressor(&decompressor);
+
+  manager.releaseSdFontAdvanceTables();
+
+  EXPECT_EQ(1, readerFont.clearPersistentCacheCallCount);
+  EXPECT_EQ(1, fallbackFont.clearPersistentCacheCallCount);
+  EXPECT_EQ(0, readerFont.releaseForLowMemoryCallCount);  // glyph caches stay usable
+  EXPECT_EQ(0, decompressor.clearCacheCallCount);
+}
+
 TEST(FontCacheManagerTest, PrewarmScopeMergesStylesThatResolveToTheSameSdFontData) {
   SdCardFont font;
   font.resolvedStyles[EpdFontFamily::BOLD] = EpdFontFamily::REGULAR;

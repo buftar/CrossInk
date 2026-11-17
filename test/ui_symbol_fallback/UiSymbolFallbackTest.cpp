@@ -50,8 +50,8 @@ TEST(UiSymbolFallback, PreservesNormalGlyphsAndMissingGlyphBehavior) {
 
 namespace {
 constexpr EpdUnicodeInterval cjkIntervals[] = {{0x4E00, 0x4E01, 0}};
-constexpr EpdGlyph cjkGlyphs[] = {{18, 18, 20 * 16, 0, 16, 81, 0}, {18, 18, 20 * 16, 0, 16, 81, 0}};
-constexpr EpdGlyph cjkBoldGlyphs[] = {{19, 18, 21 * 16, 0, 16, 86, 0}};
+constexpr EpdGlyph cjkGlyphs[] = {{18, 18, 20 * 16, 0, 16, 0}, {18, 18, 20 * 16, 0, 16, 0}};
+constexpr EpdGlyph cjkBoldGlyphs[] = {{19, 18, 21 * 16, 0, 16, 0}};
 constexpr EpdUnicodeInterval cjkBoldIntervals[] = {{0x4E00, 0x4E00, 0}};
 EpdFontData cjkData(const EpdGlyph* glyphs, const EpdUnicodeInterval* intervals) {
   EpdFontData data{};
@@ -131,9 +131,8 @@ namespace {
 // A small face with no Unicode spaces, and a visible replacement box.
 constexpr EpdUnicodeInterval spacingIntervals[] = {{0x20, 0x20, 0}, {'.', '.', 1}, {'0', '0', 2},
                                                    {'A', 'A', 3},   {'M', 'M', 4}, {0xFFFD, 0xFFFD, 5}};
-constexpr EpdGlyph spacingGlyphs[] = {{0, 0, 80, 0, 0, 0, 0},     {2, 2, 48, 0, 2, 0, 0},
-                                      {8, 12, 128, 0, 12, 0, 0},  {9, 12, 160, 0, 12, 0, 0},
-                                      {16, 12, 320, 0, 12, 0, 0}, {10, 12, 192, 0, 12, 0, 0}};
+constexpr EpdGlyph spacingGlyphs[] = {{0, 0, 80, 0, 0, 0},    {2, 2, 48, 0, 2, 0},     {8, 12, 128, 0, 12, 0},
+                                      {9, 12, 160, 0, 12, 0}, {16, 12, 320, 0, 12, 0}, {10, 12, 192, 0, 12, 0}};
 EpdFontData spacingData() {
   EpdFontData data{};
   data.glyph = spacingGlyphs;
@@ -197,7 +196,7 @@ TEST(UnicodeSpaces, PreservesNativeBlankWidthsAndScalesWithFontStyle) {
 
 TEST(UnicodeSpaces, VisiblePlaceholderInSpaceSlotStillMeasuresAsBlankSpacing) {
   constexpr EpdUnicodeInterval intervals[] = {{0x2009, 0x2009, 0}};
-  constexpr EpdGlyph glyphs[] = {{8, 12, 192, 0, 12, 0, 0}};
+  constexpr EpdGlyph glyphs[] = {{8, 12, 192, 0, 12, 0}};
   auto data = spacingData();
   data.intervals = intervals;
   data.glyph = glyphs;
@@ -213,7 +212,7 @@ TEST(UnicodeSpaces, VisiblePlaceholderInSpaceSlotStillMeasuresAsBlankSpacing) {
 
 TEST(UnicodeSpaces, PreservesNativeOghamStemlineInkAndWidth) {
   constexpr EpdUnicodeInterval intervals[] = {{0x1680, 0x1680, 0}};
-  constexpr EpdGlyph glyphs[] = {{8, 2, 160, 0, 2, 0, 0}};
+  constexpr EpdGlyph glyphs[] = {{8, 2, 160, 0, 2, 0}};
   auto data = spacingData();
   data.intervals = intervals;
   data.glyph = glyphs;

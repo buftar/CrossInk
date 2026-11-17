@@ -128,7 +128,7 @@ void fixture(const std::string& path, const std::vector<Style>& styles) {
     put32(bytes, toc + 24, bytes.size());
     append(bytes, s.intervals.data(), s.intervals.size() * sizeof(EpdUnicodeInterval));
     for (uint32_t g = 0; g < count; ++g) {
-      EpdGlyph glyph{};
+      CpfontGlyphRecord glyph{};
       glyph.advanceX = advance(g, s.id);
       glyph.width = glyph.height = 1;
       glyph.dataLength = 1;
@@ -193,7 +193,7 @@ void kernFixture(const std::string& path, uint8_t classes = 255) {
   const EpdUnicodeInterval replacement{0xfffd, 0xfffd, count};
   append(bytes, &replacement, sizeof(replacement));
   for (uint32_t i = 0; i <= count; ++i) {
-    EpdGlyph g{};
+    CpfontGlyphRecord g{};
     g.width = g.height = g.dataLength = 1;
     g.advanceX = i + 16;
     append(bytes, &g, sizeof(g));
@@ -393,7 +393,7 @@ void contentSizeChecks(const std::string& path) {
   {
     std::fstream out(path, std::ios::in | std::ios::out | std::ios::binary);
     const uint16_t tooLarge = 4097;
-    out.seekp(96 + sizeof(EpdUnicodeInterval) + offsetof(EpdGlyph, dataLength));
+    out.seekp(96 + sizeof(EpdUnicodeInterval) + offsetof(CpfontGlyphRecord, dataLength));
     out.write(reinterpret_cast<const char*>(&tooLarge), sizeof(tooLarge));
   }
   {
@@ -494,9 +494,9 @@ void upstreamFontTests(const std::string& path) {
   // through direct metrics, prewarm, and on-demand/lean-content loading.
   for (int damage = 0; damage < 3; ++damage) {
     fixture(path, {{0, table({{0x41, 0x44}})}});
-    constexpr size_t glyphOffset = 64 + sizeof(EpdUnicodeInterval) + sizeof(EpdGlyph);
+    constexpr size_t glyphOffset = 64 + sizeof(EpdUnicodeInterval) + sizeof(CpfontGlyphRecord);
     std::fstream file(path, std::ios::in | std::ios::out | std::ios::binary);
-    EpdGlyph glyph{};
+    CpfontGlyphRecord glyph{};
     file.seekg(glyphOffset);
     file.read(reinterpret_cast<char*>(&glyph), sizeof(glyph));
     if (damage == 0) glyph.dataLength = 500;
@@ -516,13 +516,13 @@ void upstreamFontTests(const std::string& path) {
       assert(font.buildAdvanceTable("ABCD", 1) == 0);
       assert(font.prewarm("ABCD", 1) == (lean ? 0 : 1));  // fixture has no replacement glyph
       const auto* bad = font.getEpdFont()->getGlyph('B');
-      assert(bad && bad->width == 0 && bad->dataLength == 0 && bad->advanceX == 0);
+      assert(bad && bad->width == 0 && epdGlyphDataLength(*bad, true) == 0 && bad->advanceX == 0);
       const auto* good = font.getEpdFont()->getGlyph('A');
-      assert(good && good->dataLength == 1 && good->width == 1);
+      assert(good && epdGlyphDataLength(*good, true) == 1 && good->width == 1);
       assert(!SdCardFont::takeCorruptGlyphNotice());
       font.clearPersistentCache();
       bad = font.getEpdFont()->getGlyph('B');
-      assert(bad && bad->dataLength == 0);
+      assert(bad && epdGlyphDataLength(*bad, true) == 0);
     }
   }
   fixture(path, {{0, table({{0x100, 0x100 + 999}})}, {1, table({{0x100, 0x100 + 999}})}});

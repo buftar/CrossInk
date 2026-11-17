@@ -850,7 +850,7 @@ def rasterize_font_style(fontfile, size, intervals, style_id=0, force_autohint=F
 
 # --- Binary packing helpers ---
 
-# EpdGlyph struct: 16 bytes, little-endian
+# CpfontGlyphRecord struct (SdCardFont.h): 16 bytes, little-endian
 GLYPH_STRUCT_FORMAT = "<BBHhhH2xI"
 assert struct.calcsize(GLYPH_STRUCT_FORMAT) == 16
 

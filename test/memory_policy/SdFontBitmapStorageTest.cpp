@@ -33,7 +33,7 @@ std::vector<uint8_t> fixture() {
   append(b, EpdUnicodeInterval{'A', 'C', 0});
   append(b, EpdUnicodeInterval{0xFFFD, 0xFFFD, 3});
   for (uint32_t i = 0; i < 4; i++) {
-    EpdGlyph g{};
+    CpfontGlyphRecord g{};
     g.width = 8;
     g.height = 8;
     g.advanceX = 128;
@@ -63,7 +63,7 @@ std::vector<uint8_t> multiStyleFixture(bool supplementary, bool differentLastSty
     append(bytes, EpdUnicodeInterval{first + offset, first + offset + 2, 0});
     append(bytes, EpdUnicodeInterval{supplementary ? 0x1FFFDu : 0xFFFDu, supplementary ? 0x1FFFDu : 0xFFFDu, 3});
     for (uint32_t i = 0; i < 4; ++i) {
-      EpdGlyph glyph{};
+      CpfontGlyphRecord glyph{};
       glyph.width = 8;
       glyph.height = 8;
       glyph.advanceX = 128 + style * 16;
@@ -94,7 +94,7 @@ TEST_F(SdFontBitmapStorageTest, ProductionLoadGrowRetainReleaseAndReload) {
   auto* data = font.getEpdFont()->data;
   ASSERT_NE(data->bitmap, nullptr);
   EXPECT_EQ(byteBufferPool(data->bitmap), MemoryPool::Psram);
-  EXPECT_EQ(memcmp(data->bitmap, fixture().data() + 64 + 24 + 4 * sizeof(EpdGlyph), 8), 0);
+  EXPECT_EQ(memcmp(data->bitmap, fixture().data() + 64 + 24 + 4 * sizeof(CpfontGlyphRecord), 8), 0);
   const auto* first = data->bitmap;
   font.clearCache();
   ASSERT_EQ(font.prewarm("A", 1), 0);
@@ -115,7 +115,7 @@ TEST_F(SdFontBitmapStorageTest, FailureInvalidatesViewsAndCanRecover) {
   SdCardFont font;
   ASSERT_TRUE(font.load("font.cpfont"));
   ASSERT_EQ(font.prewarm("A", 1), 0);
-  fakeheap::external.fail = 1;
+  fakeheap::external.fail = 3;  // first attempt plus both advance-table release retries
   fakeheap::internal.largest = 1;
   EXPECT_GT(font.prewarm("ABC", 1), 0);
   EXPECT_TRUE(font.lastPrewarmFailed());
@@ -124,6 +124,19 @@ TEST_F(SdFontBitmapStorageTest, FailureInvalidatesViewsAndCanRecover) {
   fakeheap::internal.largest = 1024 * 1024;
   ASSERT_EQ(font.prewarm("ABC", 1), 0);
   EXPECT_NE(font.getEpdFont()->data->bitmap, nullptr);
+}
+TEST_F(SdFontBitmapStorageTest, OneFailedBitmapReservationRetriesAfterReleasingAdvanceTables) {
+  SdCardFont font;
+  ASSERT_TRUE(font.load("font.cpfont"));
+  ASSERT_EQ(font.prewarm("A", 1), 0);
+  ASSERT_EQ(font.buildAdvanceTable("ABC", 1), 0);
+  ASSERT_TRUE(font.hasAdvanceTable());
+  fakeheap::external.fail = 1;
+  fakeheap::internal.largest = 1;
+  EXPECT_EQ(font.prewarm("ABC", 1), 0);  // adapted from CrossPoint #4112
+  EXPECT_FALSE(font.lastPrewarmFailed());
+  EXPECT_NE(font.getEpdFont()->data->bitmap, nullptr);
+  EXPECT_FALSE(font.hasAdvanceTable());  // released to make room; rebuilt by the next layout
 }
 TEST_F(SdFontBitmapStorageTest, C3AndAdmittedInternalFallbackAndMetadataOnly) {
   for (bool psram : {false, true}) {
@@ -156,7 +169,7 @@ TEST_F(SdFontBitmapStorageTest, ExternalBitmapsStillHonorUnderuseAndInternalPres
   append(bytes, EpdUnicodeInterval{0x100, 0x100 + 599, 0});
   append(bytes, EpdUnicodeInterval{0xFFFD, 0xFFFD, 600});
   for (uint32_t i = 0; i < 601; ++i) {
-    EpdGlyph g{};
+    CpfontGlyphRecord g{};
     g.width = 8;
     g.height = 8;
     g.advanceX = 128;
@@ -221,7 +234,7 @@ TEST_F(SdFontBitmapStorageTest, SharedCoveragePreservesStyleMetricsAndSkipsDupli
 
 TEST_F(SdFontBitmapStorageTest, FailureAfterSharedStylesCanUnloadAndRetry) {
   auto broken = multiStyleFixture(false);
-  const size_t styleBytes = 2 * sizeof(EpdUnicodeInterval) + 4 * sizeof(EpdGlyph) + 32;
+  const size_t styleBytes = 2 * sizeof(EpdUnicodeInterval) + 4 * sizeof(CpfontGlyphRecord) + 32;
   // The first two styles share successfully before the third fails validation.
   put32(broken, 32 + 4 * 32 + 2 * styleBytes, 'Z');
   Storage.put("broken.cpfont", broken);

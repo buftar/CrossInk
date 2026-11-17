@@ -209,8 +209,9 @@ const uint8_t* FontDecompressor::getBitmap(const EpdFontData* fontData, const Ep
   }
 
   // Compact just the requested glyph from byte-aligned data into scratch buffer
-  if (!ensureCapacity(hotGlyphBuf, hotGlyphBufCapacity, glyph->dataLength)) {
-    LOG_ERR("FDC", "Failed to allocate %u bytes for glyph scratch", (unsigned)glyph->dataLength);
+  const uint32_t glyphBytes = epdGlyphDataLength(*glyph, fontData->is2Bit);
+  if (!ensureCapacity(hotGlyphBuf, hotGlyphBufCapacity, glyphBytes)) {
+    LOG_ERR("FDC", "Failed to allocate %u bytes for glyph scratch", (unsigned)glyphBytes);
     stats.getBitmapTimeUs += micros() - tStart;
     return nullptr;
   }
@@ -338,7 +339,7 @@ int FontDecompressor::prewarmCache(const EpdFontData* fontData, const char* utf8
   bool groupCapWarned = false;
 
   for (uint16_t i = 0; i < glyphCount; i++) {
-    totalBytes += fontData->glyph[neededGlyphs[i]].dataLength;
+    totalBytes += epdGlyphDataLength(fontData->glyph[neededGlyphs[i]], fontData->is2Bit);
     uint16_t gi = getGroupIndex(fontData, neededGlyphs[i]);
     bool found = false;
     for (uint8_t j = 0; j < groupCount; j++) {
@@ -496,7 +497,7 @@ int FontDecompressor::prewarmCache(const EpdFontData* fontData, const char* utf8
       const EpdGlyph& glyph = fontData->glyph[slot.glyphs[i].glyphIndex];
       compactSingleGlyph(&tempBuf[slot.glyphs[i].alignedOffset], &slot.buffer[writeOffset], glyph.width, glyph.height);
       slot.glyphs[i].bufferOffset = writeOffset;
-      writeOffset += glyph.dataLength;
+      writeOffset += epdGlyphDataLength(glyph, fontData->is2Bit);
     }
 
     free(tempBuf);

@@ -3211,7 +3211,7 @@ class SimulatorSmokeTest {
     RenderLock lock;
     // Deliberately omit every special space while providing a visible replacement.
     static const EpdUnicodeInterval intervals[] = {{0x20, 0x20, 0}, {'M', 'M', 1}, {0xFFFD, 0xFFFD, 2}};
-    static const EpdGlyph glyphs[] = {{0, 0, 80, 0, 0, 0, 0}, {8, 8, 320, 0, 8, 8, 0}, {8, 8, 160, 0, 8, 8, 0}};
+    static const EpdGlyph glyphs[] = {{0, 0, 80, 0, 0, 0}, {8, 8, 320, 0, 8, 0}, {8, 8, 160, 0, 8, 0}};
     static const uint8_t bitmap[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
     static const EpdFontData data = [] {
       EpdFontData value{};

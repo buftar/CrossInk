@@ -21,6 +21,7 @@
 #include <Logging.h>
 #include <Memory.h>
 #include <SPI.h>
+#include <SdCardFont.h>
 #include <TrustedTime.h>
 
 #include "util/PluginEvents.h"
@@ -1302,6 +1303,7 @@ void setupDisplayAndFonts(const bool seamless, const bool loadReaderResources, c
   }
   fontCacheManager.setFontDecompressor(&fontDecompressor);
   renderer.setFontCacheManager(&fontCacheManager);
+  SdCardFont::setAdvanceReleaseHook([] { fontCacheManager.releaseSdFontAdvanceTables(); });
 
 #if !CROSSINK_SCALABLE_FONTS
   renderer.insertFont(LEXENDDECA_10_FONT_ID, lexenddeca10FontFamily.withSize(LEXENDDECA_10_FONT_ID, 10));

@@ -7,6 +7,7 @@
 inline int failReadCall = -1, readCalls = 0, openFiles = 0;
 inline int failSeekCall = -1, seekCalls = 0;
 inline bool enforceSingleReader = false, failOpen = false;
+inline uint32_t fileModificationTime = 0;  // FontFlashCache staleness input
 inline unsigned long millis() {
   return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch())
       .count();
@@ -44,6 +45,7 @@ class HalFile {
     std::fseek(file_, pos, SEEK_SET);
     return size;
   }
+  uint32_t modificationTime() const { return fileModificationTime; }
   bool seekSet(uint32_t off) {
     if (seekCalls++ == failSeekCall) return false;
     return file_ && std::fseek(file_, off, SEEK_SET) == 0;

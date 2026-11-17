@@ -4,6 +4,7 @@
 #include <ScalableBuiltins.h>
 #endif
 
+#include <FontFlashCache.h>
 #include <GfxRenderer.h>
 #include <HalStorage.h>
 #include <Logging.h>
@@ -141,6 +142,30 @@ void SdCardFontSystem::persistSettingsChange() const {
   } else {
     SETTINGS.saveToFile();
   }
+}
+
+size_t SdCardFontSystem::selectedFlashFiles(const char* paths[3]) {
+  if (SETTINGS.sdFontFamilyName[0] == '\0' || !fontFlashCache().available()) return 0;
+  ensureRegistry();
+  const auto* family = registry_.findSummary(SETTINGS.sdFontFamilyName);
+  if (!family || family->isScalable() || !family->ensureDetails()) return 0;
+  return manager_.flashFilesFor(*family, SETTINGS.getSdFontTargetPointSize(), paths);
+}
+
+bool SdCardFontSystem::flashCopyNeeded() {
+  const char* paths[3];
+  const size_t count = selectedFlashFiles(paths);
+  return count != 0 && !fontFlashCache().matches(paths, count);
+}
+
+void SdCardFontSystem::copySelectedFontToFlash() {
+  const char* paths[3];
+  const size_t count = selectedFlashFiles(paths);
+  if (count == 0) return;
+  const unsigned long start = millis();
+  const size_t resident = fontFlashCache().store(paths, count);
+  LOG_INF("SDFS", "Font flash copy: %u of %u files in %lu ms", unsigned(resident), unsigned(count), millis() - start);
+  fontReloadPending_ = true;
 }
 
 void SdCardFontSystem::ensureLoaded(GfxRenderer& renderer) {

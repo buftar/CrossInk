@@ -23,6 +23,9 @@ class SdCardFontManager {
   // Load the closest body file, plus up to two budgeted content sizes for bitmap fonts.
   bool loadFamilyClosest(const SdCardFontFamilyInfo& family, GfxRenderer& renderer, uint8_t targetPointSize);
   // Shared by registry loads and bounded dictionary-return discovery. Zero skips a file lookup.
+  // X3 dual-boot fork: the body + content-size files a load at this size uses
+  // (FontFlashCache copies exactly these). Paths point into family.
+  size_t flashFilesFor(const SdCardFontFamilyInfo& family, uint8_t targetPointSize, const char* paths[3]) const;
   static std::array<uint8_t, 2> contentSizeTargets(uint8_t bodySize, std::array<uint16_t, 2> scales = {512, 192});
   bool setContentSizeScales(std::array<uint16_t, 2> scales) {
     if (contentSizeScales_ == scales) return false;
@@ -113,6 +116,7 @@ class SdCardFontManager {
 #endif
 
  private:
+  static const SdCardFontFileInfo* contentFile(const SdCardFontFamilyInfo& family, uint8_t target);
 #if CROSSINK_SCALABLE_FONTS
   std::unique_ptr<HalScalableFont> scalable_[4];
   uint32_t scalableHash_ = 0;

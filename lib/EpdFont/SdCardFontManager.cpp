@@ -6,6 +6,7 @@
 
 #include <EpdFontFamily.h>
 #include <FontCacheManager.h>
+#include <FontFlashCache.h>
 #include <GfxRenderer.h>
 #include <HalStorage.h>
 #include <Logging.h>
@@ -13,6 +14,7 @@
 #include <SdCardFontRegistry.h>
 
 #include <cstdlib>
+#include <cstring>
 
 SdCardFontManager::~SdCardFontManager() {
   for (auto& lf : loaded_) {
@@ -94,6 +96,10 @@ bool SdCardFontManager::loadFamilyClosest(const SdCardFontFamilyInfo& family, Gf
     return false;
   }
 
+  // Use flash copies of these files only if they still match the SD card.
+  const char* flashPaths[3];
+  fontFlashCache().matches(flashPaths, flashFilesFor(family, targetPointSize, flashPaths));
+
   // Body plus two optional sizes; allocate this tiny owner list once at load.
   loaded_.reserve(3);
   if (loadFile(*selected, family.name.c_str(), renderer) == 0) {
@@ -104,6 +110,36 @@ bool SdCardFontManager::loadFamilyClosest(const SdCardFontFamilyInfo& family, Gf
   loadedPointSize_ = selected->pointSize;
   loadContentSizes(family, renderer);
   return true;
+}
+
+const SdCardFontFileInfo* SdCardFontManager::contentFile(const SdCardFontFamilyInfo& family, const uint8_t target) {
+  // Match the renderer's nearest/ties-grow pick in both directions, so a loaded
+  // content size is one the renderer will actually choose (13pt with 12/14pt files -> 14pt).
+  const SdCardFontFileInfo* file = nullptr;
+  for (const auto& candidate : family.files) {
+    if (candidate.style != 0 || candidate.pointSize < 8 || candidate.pointSize > 44) continue;
+    const int distance = std::abs(int(candidate.pointSize) - int(target));
+    const int bestDistance = file ? std::abs(int(file->pointSize) - int(target)) : 256;
+    if (distance < bestDistance || (distance == bestDistance && candidate.pointSize > file->pointSize))
+      file = &candidate;
+  }
+  return file;
+}
+
+size_t SdCardFontManager::flashFilesFor(const SdCardFontFamilyInfo& family, const uint8_t targetPointSize,
+                                        const char* paths[3]) const {
+  const SdCardFontFileInfo* body = family.findClosestFile(targetPointSize);
+  if (!body) return 0;
+  size_t count = 0;
+  paths[count++] = body->path.c_str();
+  if (body->pointSize < 8 || body->pointSize > 44) return count;
+  for (const uint8_t target : contentSizeTargetsForBody(body->pointSize)) {
+    const SdCardFontFileInfo* file = contentFile(family, target);
+    bool present = false;
+    for (size_t i = 0; file && i < count; ++i) present |= std::strcmp(paths[i], file->path.c_str()) == 0;
+    if (file && !present) paths[count++] = file->path.c_str();
+  }
+  return count;
 }
 
 std::array<uint8_t, 2> SdCardFontManager::contentSizeTargets(const uint8_t bodySize,
@@ -122,21 +158,17 @@ void SdCardFontManager::loadContentSizes(const SdCardFontFamilyInfo& family, Gfx
   constexpr size_t FREE_RESERVE = 96U * 1024U;
   constexpr size_t BLOCK_RESERVE = 48U * 1024U;
   for (const uint8_t target : contentSizeTargetsForBody(loadedPointSize_)) {
-    // Match the renderer's nearest/ties-grow pick in both directions, so a loaded
-    // content size is one the renderer will actually choose (13pt with 12/14pt files -> 14pt).
-    const SdCardFontFileInfo* file = nullptr;
-    for (const auto& candidate : family.files) {
-      if (candidate.style != 0 || candidate.pointSize < 8 || candidate.pointSize > 44) continue;
-      const int distance = std::abs(int(candidate.pointSize) - int(target));
-      const int bestDistance = file ? std::abs(int(file->pointSize) - int(target)) : 256;
-      if (distance < bestDistance || (distance == bestDistance && candidate.pointSize > file->pointSize))
-        file = &candidate;
-    }
+    const SdCardFontFileInfo* file = contentFile(family, target);
     if (!file || file->pointSize < 8 || file->pointSize > 44) continue;
     bool present = false;
     for (const auto& loaded : loaded_) present |= loaded.size == file->pointSize;
     if (present) continue;
-    if (ESP.getFreeHeap() < FREE_RESERVE + SIZE_BUDGET || ESP.getMaxAllocHeap() < BLOCK_RESERVE + SIZE_BUDGET) {
+    // A size in the validated flash-cache set (resident or SD-only) costs the
+    // same small, fixed heap and loads at any normal reader heap, so the font
+    // identity stops depending on free heap (uxjulia/CrossInk#957). The low
+    // floor still protects layout.
+    const size_t freeReserve = fontFlashCache().listed(file->path.c_str()) ? 64U * 1024U : FREE_RESERVE;
+    if (ESP.getFreeHeap() < freeReserve + SIZE_BUDGET || ESP.getMaxAllocHeap() < BLOCK_RESERVE + SIZE_BUDGET) {
       LOG_DBG("SDMGR", "Skipping optional size %u: preserving heap reserve", file->pointSize);
       continue;
     }

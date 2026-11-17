@@ -33,6 +33,13 @@ class SdCardFontSystem {
   /// Also re-discovers if the registry has been marked dirty (e.g. by web upload).
   void ensureLoaded(GfxRenderer& renderer);
 
+  /// X3 dual-boot fork: true when the selected bitmap SD font's body and
+  /// content-size files are not yet copied to the flash font area.
+  bool flashCopyNeeded();
+  /// Copy them (seconds; the caller shows progress). The next ensureLoaded()
+  /// reloads so every size reads from flash.
+  void copySelectedFontToFlash();
+
   // Book-level bitmap size preferences, in 1/256 em. Font loading and cache
   // identities are settled before layout; dictionary return reuses these hints.
   void setContentSizeScales(std::array<uint16_t, 2> scales) {
@@ -136,6 +143,7 @@ class SdCardFontSystem {
   void refreshIfDirty() { ensureRegistry(); }
 
  private:
+  size_t selectedFlashFiles(const char* paths[3]);
   void persistSettingsChange() const;
 
   SdCardFontRegistry registry_;

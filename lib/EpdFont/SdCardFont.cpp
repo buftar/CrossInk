@@ -15,6 +15,7 @@
 #include <memory>
 
 #include "EpdFontFamily.h"
+#include "FontFlashCache.h"
 
 static_assert(sizeof(CpfontGlyphRecord) == 16 && offsetof(CpfontGlyphRecord, dataOffset) == 12,
               "CpfontGlyphRecord must match the .cpfont glyph layout");
@@ -23,6 +24,38 @@ static_assert(sizeof(EpdKernClassEntry) == 3, "EpdKernClassEntry must be 3 bytes
 static_assert(sizeof(EpdLigaturePair) == 8, "EpdLigaturePair must be 8 bytes to match .cpfont file layout");
 
 namespace {
+// X3 dual-boot fork: a .cpfont read from its flash copy when one is validated
+// (FontFlashCache), else from SD. Mirrors the HalFile calls used below.
+class FontSource {
+ public:
+  bool open(const char* path) {
+    flash_ = fontFlashCache().find(path, base_, size_);
+    pos_ = 0;
+    return flash_ || Storage.openFileForRead("SDCF", path, file_);
+  }
+  int read(void* bytes, const size_t count) {
+    if (!flash_) return file_.read(bytes, count);
+    const size_t n = std::min<size_t>(count, size_ - pos_);
+    if (!fontFlashCache().read(base_ + pos_, bytes, n)) return -1;
+    pos_ += n;
+    return static_cast<int>(n);
+  }
+  bool seekSet(const size_t offset) {
+    if (!flash_) return file_.seekSet(offset);
+    if (offset > size_) return false;
+    pos_ = static_cast<uint32_t>(offset);
+    return true;
+  }
+  size_t fileSize() { return flash_ ? size_ : file_.fileSize(); }
+  void close() {
+    if (!flash_) file_.close();
+  }
+
+ private:
+  HalFile file_;
+  bool flash_ = false;
+  uint32_t base_ = 0, size_ = 0, pos_ = 0;
+};
 
 // FNV-1a hash for content-based font ID generation
 constexpr uint32_t FNV_OFFSET = 2166136261u;
@@ -296,8 +329,8 @@ bool SdCardFont::loadStyleLigatures(PerStyle& s) {
     return true;
   }
 
-  HalFile file;
-  if (!Storage.openFileForRead("SDCF", filePath_, file)) {
+  FontSource file;
+  if (!file.open(filePath_)) {
     LOG_ERR("SDCF", "Failed to open .cpfont for ligatures: %s", filePath_);
     return false;
   }
@@ -343,7 +376,7 @@ uint16_t kernClassBlocks(const uint16_t entryCount) { return (entryCount + KERN_
 // first codepoint of each block followed by the table's last codepoint. Once it
 // is filled, only blocks whose codepoint range holds a page codepoint are read.
 // Otherwise every block is read, and `index` (if any) is filled on the way.
-bool readKernClasses(HalFile& file, const uint32_t offset, const uint16_t entryCount, const uint8_t classCount,
+bool readKernClasses(FontSource& file, const uint32_t offset, const uint16_t entryCount, const uint8_t classCount,
                      const uint32_t* codepoints, const uint32_t cpCount, uint8_t* classes, EpdKernClassEntry* block,
                      uint16_t* index, const bool indexReady) {
   memset(classes, 0, cpCount);
@@ -409,8 +442,8 @@ bool SdCardFont::buildMiniKernMatrix(PerStyle& s, const uint32_t* codepoints, ui
     return true;  // font has no kern classes — nothing to build
   }
 
-  HalFile file;
-  if (!Storage.openFileForRead("SDCF", filePath_, file)) {
+  FontSource file;
+  if (!file.open(filePath_)) {
     LOG_ERR("SDCF", "Failed to open .cpfont for mini kern: %s", filePath_);
     freeStyleMiniKern(s);
     return false;
@@ -592,8 +625,8 @@ bool SdCardFont::load(const char* path, const size_t residentLimit) {
   strncpy(filePath_, path, sizeof(filePath_) - 1);
   filePath_[sizeof(filePath_) - 1] = '\0';
 
-  HalFile file;
-  if (!Storage.openFileForRead("SDCF", path, file)) {
+  FontSource file;
+  if (!file.open(path)) {
     LOG_ERR("SDCF", "Failed to open .cpfont: %s", path);
     return false;
   }
@@ -942,8 +975,8 @@ bool SdCardFont::readAdvance(uint32_t codepoint, uint8_t style, uint16_t* outAdv
   }
   if (glyphIndex < 0) return false;
 
-  HalFile file;
-  if (!Storage.openFileForRead("SDCF", filePath_, file)) {
+  FontSource file;
+  if (!file.open(filePath_)) {
     LOG_ERR("SDCF", "readAdvance: failed to open .cpfont for U+%04X style %u", codepoint, styleIdx);
     return false;
   }
@@ -1278,8 +1311,8 @@ int SdCardFont::prewarmStyle(uint8_t styleIdx, const uint32_t* codepoints, uint3
   std::sort(readOrder.get(), readOrder.get() + validCount,
             [&](uint32_t a, uint32_t b) { return mappings[a].globalIndex < mappings[b].globalIndex; });
 
-  HalFile file;
-  if (!Storage.openFileForRead("SDCF", filePath_, file)) {
+  FontSource file;
+  if (!file.open(filePath_)) {
     LOG_ERR("SDCF", "Failed to reopen .cpfont for prewarm (style %u)", styleIdx);
     freeStyleMiniData(s);
     return failPrewarm(static_cast<int>(cpCount));
@@ -1649,8 +1682,8 @@ int SdCardFont::fetchAdvancesForCodepoints(uint32_t* codepoints, uint32_t cpCoun
               [](const CpIdx& a, const CpIdx& b) { return a.glyphIndex < b.glyphIndex; });
 
     // Open file once and read advanceX for each needed glyph.
-    HalFile file;
-    if (!Storage.openFileForRead("SDCF", filePath_, file)) {
+    FontSource file;
+    if (!file.open(filePath_)) {
       LOG_ERR("SDCF", "buildAdvanceTable: failed to open .cpfont for style %u", si);
       continue;
     }
@@ -1941,8 +1974,8 @@ const EpdGlyph* SdCardFont::onGlyphMiss(void* ctx, uint32_t codepoint) {
   bool wasAtCapacity = (self->overflowCount_ == OVERFLOW_CAPACITY);
 
   // Read glyph metadata into temporary
-  HalFile file;
-  if (!Storage.openFileForRead("SDCF", self->filePath_, file)) {
+  FontSource file;
+  if (!file.open(self->filePath_)) {
     LOG_ERR("SDCF", "Overflow: failed to open .cpfont");
     return nullptr;
   }

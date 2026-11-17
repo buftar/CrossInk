@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <cerrno>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #else
@@ -22,22 +23,25 @@ bool HalFlashPartition::begin(bool create) {
   if (size_ && (!create || descriptor_ >= 0)) return true;
   // A host flash image is separate from the simulated SD card. Tests can
   // select a disposable image without touching normal simulator data.
-  const char* path = std::getenv("CROSSINK_LANGUAGE_FLASH");
+  const bool spiffs = std::strcmp(label_, "spiffs") == 0;
+  char ownPath[64];
+  std::snprintf(ownPath, sizeof(ownPath), ".cache/%s-flash.bin", label_);
+  const char* path = spiffs ? std::getenv("CROSSINK_LANGUAGE_FLASH") : nullptr;
   if (!path || !*path) {
     if (create) ::mkdir(".cache", 0700);
-    path = ".cache/language-flash.bin";
+    path = spiffs ? ".cache/language-flash.bin" : ownPath;
   }
   descriptor_ = ::open(path, O_RDWR);
   // An absent host image represents erased device flash. Read-only validation
   // can inspect its capacity without provisioning or modifying a backing file.
   if (descriptor_ < 0 && !create && errno == ENOENT) {
-    size_ = 0x360000;
+    size_ = simulatorSize_;
     return true;
   }
   if (descriptor_ < 0 && create) {
     descriptor_ = ::open(path, O_RDWR | O_CREAT | O_EXCL, 0600);
     if (descriptor_ >= 0) {
-      size_ = 0x360000;
+      size_ = simulatorSize_;
       if (!erase(0, size_)) {
         ::close(descriptor_);
         descriptor_ = -1;
@@ -59,13 +63,13 @@ bool HalFlashPartition::begin(bool create) {
   if (size_) return true;
   (void)create;
   const auto* partition =
-      esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_SPIFFS, "spiffs");
+      esp_partition_find_first(ESP_PARTITION_TYPE_DATA, static_cast<esp_partition_subtype_t>(subtype_), label_);
   if (!partition) {
     incompatibleLayout_ = true;
-    LOG_ERR("LANG", "Missing spiffs partition");
+    LOG_ERR("LANG", "Missing %s partition", label_);
     return false;
   }
-  LOG_INF("LANG", "spiffs offset=0x%x size=0x%x", unsigned(partition->address), unsigned(partition->size));
+  LOG_INF("LANG", "%s offset=0x%x size=0x%x", label_, unsigned(partition->address), unsigned(partition->size));
   if (partition->encrypted || partition->readonly) {
     LOG_ERR("LANG", "Language data partition unavailable");
     return false;

@@ -23,12 +23,18 @@ class HalFlashPartition {
   static void unmap(Mapping& mapping);
   ~HalFlashPartition();
   HalFlashPartition() = default;
+  // Another data partition by label/subtype; the simulator backs it with .cache/<label>-flash.bin.
+  HalFlashPartition(const char* label, uint8_t subtype, size_t simulatorSize)
+      : label_(label), subtype_(subtype), simulatorSize_(simulatorSize) {}
   HalFlashPartition(const HalFlashPartition&) = delete;
   HalFlashPartition& operator=(const HalFlashPartition&) = delete;
 
  private:
   bool contains(size_t offset, size_t length) const { return offset <= size_ && length <= size_ - offset; }
   bool incompatibleLayout_ = false;
+  const char* label_ = "spiffs";
+  [[maybe_unused]] uint8_t subtype_ = 0x82;  // ESP_PARTITION_SUBTYPE_DATA_SPIFFS; device builds only
+  size_t simulatorSize_ = 0x360000;
   size_t size_ = 0;
 #if defined(SIMULATOR)
   int descriptor_ = -1;

@@ -351,13 +351,21 @@ ReaderRenderSpec readerRenderSpecForProfile(const int fontId, const uint16_t vie
   return spec;
 }
 
-void ensureReaderSdFontLoaded(GfxRenderer& renderer, const Epub* epub) {
+void ensureReaderSdFontLoaded(GfxRenderer& renderer, const Epub* epub, const bool copyToFlash = false) {
   const auto* css = epub ? epub->getCssParser() : nullptr;
   const bool useCssSizes =
       SETTINGS.embeddedStyle && normalizeRenderMode(SETTINGS.epubRenderMode) != EpubRenderMode::Light;
   sdFontSystem.setContentSizeScales(css && useCssSizes && SETTINGS.sdFontFamilyName[0]
                                         ? css->contentFontSizeScales()
                                         : std::array<uint16_t, 2>{512, 192});
+  // X3 dual-boot fork: book entry is the one place that copies fonts to flash
+  // (it owns the screen); other reloads use a matching copy or SD.
+  // shortcut: the copied set follows this book's CSS content sizes, so books with
+  // different sizes recopy on switch (~seconds); cache per book set if that is common.
+  if (copyToFlash && sdFontSystem.flashCopyNeeded()) {
+    GUI.drawPopup(renderer, tr(STR_LOADING));
+    sdFontSystem.copySelectedFontToFlash();
+  }
   sdFontSystem.ensureLoaded(renderer);
   // S3 scalable faces are already kept in PSRAM. Keep their small catalog while
   // reading too, so opening Font Size does not rescan the SD card. Bitmap/C3
@@ -2472,7 +2480,7 @@ void EpubReaderActivity::onEnter() {
   }
   showOpeningFeedback();
   sdFontSystem.setSettingsPersistenceCallback(persistReaderSdFontSettingsForBook, this);
-  ensureReaderSdFontLoaded(renderer, epub.get());
+  ensureReaderSdFontLoaded(renderer, epub.get(), true);
   showOpeningFeedback();
   ImageBlock::clearSessionRenderFailures();
   ImageBlock::setExtractor(

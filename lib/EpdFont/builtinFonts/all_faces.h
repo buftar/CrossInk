@@ -20,6 +20,14 @@
 #include <builtinFonts/bitter_16_bolditalic.h>
 #include <builtinFonts/bitter_16_italic.h>
 #include <builtinFonts/bitter_16_regular.h>
+#include <builtinFonts/bitter_18_bold.h>
+#include <builtinFonts/bitter_18_bolditalic.h>
+#include <builtinFonts/bitter_18_italic.h>
+#include <builtinFonts/bitter_18_regular.h>
+#include <builtinFonts/bitter_20_bold.h>
+#include <builtinFonts/bitter_20_bolditalic.h>
+#include <builtinFonts/bitter_20_italic.h>
+#include <builtinFonts/bitter_20_regular.h>
 #include <builtinFonts/lexenddeca_10_bold.h>
 #include <builtinFonts/lexenddeca_10_bolditalic.h>
 #include <builtinFonts/lexenddeca_10_italic.h>
@@ -36,6 +44,14 @@
 #include <builtinFonts/lexenddeca_16_bolditalic.h>
 #include <builtinFonts/lexenddeca_16_italic.h>
 #include <builtinFonts/lexenddeca_16_regular.h>
+#include <builtinFonts/lexenddeca_18_bold.h>
+#include <builtinFonts/lexenddeca_18_bolditalic.h>
+#include <builtinFonts/lexenddeca_18_italic.h>
+#include <builtinFonts/lexenddeca_18_regular.h>
+#include <builtinFonts/lexenddeca_20_bold.h>
+#include <builtinFonts/lexenddeca_20_bolditalic.h>
+#include <builtinFonts/lexenddeca_20_italic.h>
+#include <builtinFonts/lexenddeca_20_regular.h>
 
 #endif
 

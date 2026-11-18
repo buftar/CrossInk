@@ -202,7 +202,7 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   enum FONT_FAMILY { LEXENDDECA = 0, BITTER = 1, FONT_FAMILY_COUNT };
   static constexpr uint8_t BUILTIN_FONT_COUNT = FONT_FAMILY_COUNT;
   // Font size options
-  enum FONT_SIZE { TINY = 0, SMALL = 1, MEDIUM = 2, LARGE = 3, FONT_SIZE_COUNT };
+  enum FONT_SIZE { TINY = 0, SMALL = 1, MEDIUM = 2, LARGE = 3, X_LARGE = 4, XX_LARGE = 5, FONT_SIZE_COUNT };
   enum SD_FONT_SIZE_RANGE {
     SD_FONT_RANGE_TEENSY = 0,
     SD_FONT_RANGE_TINY = 1,

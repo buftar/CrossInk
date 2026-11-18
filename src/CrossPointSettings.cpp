@@ -81,10 +81,8 @@ constexpr uint8_t SLEEP_SCREEN_STORAGE_ORDER_COUNT =
 static_assert(SLEEP_SCREEN_STORAGE_ORDER_COUNT == CrossPointSettings::SLEEP_SCREEN_MODE_COUNT,
               "Update sleep screen persisted-value mapping when adding modes");
 constexpr CrossPointSettings::FONT_SIZE READER_FONT_SIZE_STORAGE_ORDER[] = {
-    CrossPointSettings::TINY,
-    CrossPointSettings::SMALL,
-    CrossPointSettings::MEDIUM,
-    CrossPointSettings::LARGE,
+    CrossPointSettings::TINY,  CrossPointSettings::SMALL,   CrossPointSettings::MEDIUM,
+    CrossPointSettings::LARGE, CrossPointSettings::X_LARGE, CrossPointSettings::XX_LARGE,
 };
 constexpr uint8_t SD_FONT_RANGE_POINT_SIZES[CrossPointSettings::SD_FONT_SIZE_RANGE_COUNT]
                                            [CrossPointSettings::SD_FONT_MAX_SIZE_STEPS] = {
@@ -1478,6 +1476,10 @@ uint8_t CrossPointSettings::getReaderFontPointSize(const FONT_SIZE size) {
       return 14;
     case LARGE:
       return 16;
+    case X_LARGE:
+      return 18;
+    case XX_LARGE:
+      return 20;
   }
 }
 
@@ -1550,6 +1552,10 @@ int CrossPointSettings::getBuiltInReaderFontId() const {
           return LEXENDDECA_14_FONT_ID;
         case LARGE:
           return LEXENDDECA_16_FONT_ID;
+        case X_LARGE:
+          return LEXENDDECA_18_FONT_ID;
+        case XX_LARGE:
+          return LEXENDDECA_20_FONT_ID;
       }
       return getFallbackReaderFontIdForFamily(LEXENDDECA);
     case BITTER:
@@ -1563,6 +1569,10 @@ int CrossPointSettings::getBuiltInReaderFontId() const {
           return BITTER_14_FONT_ID;
         case LARGE:
           return BITTER_16_FONT_ID;
+        case X_LARGE:
+          return BITTER_18_FONT_ID;
+        case XX_LARGE:
+          return BITTER_20_FONT_ID;
       }
       return getFallbackReaderFontIdForFamily(BITTER);
   }

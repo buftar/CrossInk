@@ -224,6 +224,18 @@ EpdFont lexenddeca16ItalicFont(&lexenddeca_16_italic);
 EpdFont lexenddeca16BoldItalicFont(&lexenddeca_16_bolditalic);
 EpdFontFamily lexenddeca16FontFamily(&lexenddeca16RegularFont, &lexenddeca16BoldFont, &lexenddeca16ItalicFont,
                                      &lexenddeca16BoldItalicFont);
+EpdFont lexenddeca18RegularFont(&lexenddeca_18_regular);
+EpdFont lexenddeca18BoldFont(&lexenddeca_18_bold);
+EpdFont lexenddeca18ItalicFont(&lexenddeca_18_italic);
+EpdFont lexenddeca18BoldItalicFont(&lexenddeca_18_bolditalic);
+EpdFontFamily lexenddeca18FontFamily(&lexenddeca18RegularFont, &lexenddeca18BoldFont, &lexenddeca18ItalicFont,
+                                     &lexenddeca18BoldItalicFont);
+EpdFont lexenddeca20RegularFont(&lexenddeca_20_regular);
+EpdFont lexenddeca20BoldFont(&lexenddeca_20_bold);
+EpdFont lexenddeca20ItalicFont(&lexenddeca_20_italic);
+EpdFont lexenddeca20BoldItalicFont(&lexenddeca_20_bolditalic);
+EpdFontFamily lexenddeca20FontFamily(&lexenddeca20RegularFont, &lexenddeca20BoldFont, &lexenddeca20ItalicFont,
+                                     &lexenddeca20BoldItalicFont);
 EpdFont bitter10RegularFont(&bitter_10_regular);
 EpdFont bitter10BoldFont(&bitter_10_bold);
 EpdFont bitter10ItalicFont(&bitter_10_italic);
@@ -244,6 +256,16 @@ EpdFont bitter16BoldFont(&bitter_16_bold);
 EpdFont bitter16ItalicFont(&bitter_16_italic);
 EpdFont bitter16BoldItalicFont(&bitter_16_bolditalic);
 EpdFontFamily bitter16FontFamily(&bitter16RegularFont, &bitter16BoldFont, &bitter16ItalicFont, &bitter16BoldItalicFont);
+EpdFont bitter18RegularFont(&bitter_18_regular);
+EpdFont bitter18BoldFont(&bitter_18_bold);
+EpdFont bitter18ItalicFont(&bitter_18_italic);
+EpdFont bitter18BoldItalicFont(&bitter_18_bolditalic);
+EpdFontFamily bitter18FontFamily(&bitter18RegularFont, &bitter18BoldFont, &bitter18ItalicFont, &bitter18BoldItalicFont);
+EpdFont bitter20RegularFont(&bitter_20_regular);
+EpdFont bitter20BoldFont(&bitter_20_bold);
+EpdFont bitter20ItalicFont(&bitter_20_italic);
+EpdFont bitter20BoldItalicFont(&bitter_20_bolditalic);
+EpdFontFamily bitter20FontFamily(&bitter20RegularFont, &bitter20BoldFont, &bitter20ItalicFont, &bitter20BoldItalicFont);
 
 #endif
 EpdFont smallFont(&inter_8_regular);
@@ -1384,10 +1406,14 @@ void setupDisplayAndFonts(const bool seamless, const bool loadReaderResources, c
   renderer.insertFont(LEXENDDECA_12_FONT_ID, lexenddeca12FontFamily.withSize(LEXENDDECA_10_FONT_ID, 12));
   renderer.insertFont(LEXENDDECA_14_FONT_ID, lexenddeca14FontFamily.withSize(LEXENDDECA_10_FONT_ID, 14));
   renderer.insertFont(LEXENDDECA_16_FONT_ID, lexenddeca16FontFamily.withSize(LEXENDDECA_10_FONT_ID, 16));
+  renderer.insertFont(LEXENDDECA_18_FONT_ID, lexenddeca18FontFamily.withSize(LEXENDDECA_10_FONT_ID, 18));
+  renderer.insertFont(LEXENDDECA_20_FONT_ID, lexenddeca20FontFamily.withSize(LEXENDDECA_10_FONT_ID, 20));
   renderer.insertFont(BITTER_10_FONT_ID, bitter10FontFamily.withSize(BITTER_10_FONT_ID, 10));
   renderer.insertFont(BITTER_12_FONT_ID, bitter12FontFamily.withSize(BITTER_10_FONT_ID, 12));
   renderer.insertFont(BITTER_14_FONT_ID, bitter14FontFamily.withSize(BITTER_10_FONT_ID, 14));
   renderer.insertFont(BITTER_16_FONT_ID, bitter16FontFamily.withSize(BITTER_10_FONT_ID, 16));
+  renderer.insertFont(BITTER_18_FONT_ID, bitter18FontFamily.withSize(BITTER_10_FONT_ID, 18));
+  renderer.insertFont(BITTER_20_FONT_ID, bitter20FontFamily.withSize(BITTER_10_FONT_ID, 20));
 #endif
   renderer.insertFont(UI_10_FONT_ID, ui10FontFamily);
   renderer.insertFont(UI_12_FONT_ID, ui12FontFamily);

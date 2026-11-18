@@ -31,6 +31,10 @@ emit_hash_define LEXENDDECA_14_FONT_ID \
   ./lexenddeca_14_regular.h ./lexenddeca_14_bold.h ./lexenddeca_14_bolditalic.h ./lexenddeca_14_italic.h
 emit_hash_define LEXENDDECA_16_FONT_ID \
   ./lexenddeca_16_regular.h ./lexenddeca_16_bold.h ./lexenddeca_16_bolditalic.h ./lexenddeca_16_italic.h
+emit_hash_define LEXENDDECA_18_FONT_ID \
+  ./lexenddeca_18_regular.h ./lexenddeca_18_bold.h ./lexenddeca_18_bolditalic.h ./lexenddeca_18_italic.h
+emit_hash_define LEXENDDECA_20_FONT_ID \
+  ./lexenddeca_20_regular.h ./lexenddeca_20_bold.h ./lexenddeca_20_bolditalic.h ./lexenddeca_20_italic.h
 emit_hash_define BITTER_10_FONT_ID \
   ./bitter_10_regular.h ./bitter_10_bold.h ./bitter_10_bolditalic.h ./bitter_10_italic.h
 emit_hash_define BITTER_12_FONT_ID \
@@ -39,6 +43,10 @@ emit_hash_define BITTER_14_FONT_ID \
   ./bitter_14_regular.h ./bitter_14_bold.h ./bitter_14_bolditalic.h ./bitter_14_italic.h
 emit_hash_define BITTER_16_FONT_ID \
   ./bitter_16_regular.h ./bitter_16_bold.h ./bitter_16_bolditalic.h ./bitter_16_italic.h
+emit_hash_define BITTER_18_FONT_ID \
+  ./bitter_18_regular.h ./bitter_18_bold.h ./bitter_18_bolditalic.h ./bitter_18_italic.h
+emit_hash_define BITTER_20_FONT_ID \
+  ./bitter_20_regular.h ./bitter_20_bold.h ./bitter_20_bolditalic.h ./bitter_20_italic.h
 
 # UI fonts
 emit_hash_define UI_10_FONT_ID ./inter_10_regular.h ./inter_10_bold.h ./ui_symbols_10.h
@@ -49,8 +57,8 @@ echo ""
 echo "// Font ID 0 is reserved as the \"not found\" sentinel."
 echo "// Guard against any hash accidentally producing 0."
 for id in \
-  LEXENDDECA_10_FONT_ID LEXENDDECA_12_FONT_ID LEXENDDECA_14_FONT_ID LEXENDDECA_16_FONT_ID \
-  BITTER_10_FONT_ID BITTER_12_FONT_ID BITTER_14_FONT_ID BITTER_16_FONT_ID \
+  LEXENDDECA_10_FONT_ID LEXENDDECA_12_FONT_ID LEXENDDECA_14_FONT_ID LEXENDDECA_16_FONT_ID LEXENDDECA_18_FONT_ID LEXENDDECA_20_FONT_ID \
+  BITTER_10_FONT_ID BITTER_12_FONT_ID BITTER_14_FONT_ID BITTER_16_FONT_ID BITTER_18_FONT_ID BITTER_20_FONT_ID \
   UI_10_FONT_ID UI_12_FONT_ID SMALL_FONT_ID; do
   echo "static_assert(${id} != 0, \"Font ID collision with sentinel\");"
 done

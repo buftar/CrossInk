@@ -6642,7 +6642,8 @@ class SimulatorSmokeTest {
 #else
     for (const int base : {BITTER_12_FONT_ID, LEXENDDECA_12_FONT_ID}) {
       if (renderer.getFontPointSize(base) != 12) fail("Bitmap body size missing");
-      for (const auto pair : {std::pair<uint8_t, uint8_t>{8, 10}, {11, 12}, {13, 14}, {15, 16}, {44, 16}}) {
+      for (const auto pair :
+           {std::pair<uint8_t, uint8_t>{8, 10}, {11, 12}, {13, 14}, {15, 16}, {17, 18}, {19, 20}, {44, 20}}) {
         const int chosen = renderer.getFontIdForSize(base, pair.first);
         if (renderer.getFontPointSize(chosen) != pair.second) fail("Bitmap size snapping failed");
       }

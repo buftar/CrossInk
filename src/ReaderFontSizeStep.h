@@ -8,7 +8,7 @@ inline constexpr uint8_t SCALABLE_READER_FONT_SIZES[] = {8, 9, 10, 11, 12, 13, 1
 #if CROSSINK_SCALABLE_FONTS
 inline constexpr auto& BUILTIN_READER_FONT_SIZES = SCALABLE_READER_FONT_SIZES;
 #else
-inline constexpr uint8_t BUILTIN_READER_FONT_SIZES[] = {10, 12, 14, 16};
+inline constexpr uint8_t BUILTIN_READER_FONT_SIZES[] = {10, 12, 14, 16, 18, 20};
 #endif
 
 inline uint8_t closestBuiltinReaderPointSize(uint8_t target) {

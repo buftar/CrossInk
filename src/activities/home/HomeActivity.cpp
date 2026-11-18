@@ -255,6 +255,9 @@ static void switchToOtherOtaApp() {
     return;
   }
   LOG_INF("BOOT", "Switching to app in OTA slot %d", target->subtype - ESP_PARTITION_SUBTYPE_APP_OTA_0);
+  // Leaving from Home: a reader sleep from earlier must not reopen the book when the user switches back.
+  APP_STATE.lastSleepFromReader = false;
+  APP_STATE.saveToFile();
   if (ota_boot::switchTo(target)) {
     ESP.restart();  // intentional recovery flow: reboot into the other app
   }

@@ -1077,3 +1077,6 @@ STR_TWO_TONE_TEXT_AA: "Сглаживание текста двумя оттен
 STR_RULED_LINES: "Линовка"
 STR_WORD_HOLD_ACTION: "Удержание текста"
 STR_ASK: "Спрашивать"
+STR_SWITCH_TO_APP_FORMAT: "Switch to %s"
+STR_FIRMWARE_OVERWRITE_APP_PROMPT_FORMAT: "Overwrite %s?"
+STR_UPDATE_BLOCKED_OTHER_APP: "Other app in update slot. Update via USB."

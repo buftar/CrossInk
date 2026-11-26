@@ -1077,3 +1077,6 @@ STR_TWO_TONE_TEXT_AA: "Мәтінді екі сұр реңкпен тегіст�
 STR_RULED_LINES: "Жол Сызықтары"
 STR_WORD_HOLD_ACTION: "Мәтінді ұзақ басу"
 STR_ASK: "Сұрау"
+STR_SWITCH_TO_APP_FORMAT: "Switch to %s"
+STR_FIRMWARE_OVERWRITE_APP_PROMPT_FORMAT: "Overwrite %s?"
+STR_UPDATE_BLOCKED_OTHER_APP: "Other app in update slot. Update via USB."

@@ -263,6 +263,16 @@ static void switchToOtherOtaApp() {
   }
 }
 
+// Dual-boot: the switch entry, when another app is detected in the other OTA slot (every home menu).
+void appendSwitchAppItem(HomeMenuEntries& items) {
+  if (const char* dualBootName = getDualBootAppName()) {
+    // Static buffer: menu entries hold a const char* that must outlive this scope
+    static char switchLabel[64];
+    snprintf(switchLabel, sizeof(switchLabel), tr(STR_SWITCH_TO_APP_FORMAT), dualBootName);
+    items.push({switchLabel, Transfer, HomeMenuAction::SwitchApp});
+  }
+}
+
 void appendHomeMenuItems(HomeMenuEntries& items, bool hasPlugins, bool hasReadingStats, bool hasBookmarks,
                          bool hasClippings) {
   items.push({tr(STR_BROWSE_FILES), Folder, HomeMenuAction::BrowseFiles});
@@ -279,15 +289,7 @@ void appendHomeMenuItems(HomeMenuEntries& items, bool hasPlugins, bool hasReadin
   }
 
   items.push({tr(STR_FILE_TRANSFER), Transfer, HomeMenuAction::FileTransfer});
-
-  // Dual-boot: show switch entry when another app is detected in the other OTA slot
-  if (const char* dualBootName = getDualBootAppName()) {
-    // Static buffer: menu entries hold a const char* that must outlive this scope
-    static char switchLabel[64];
-    snprintf(switchLabel, sizeof(switchLabel), tr(STR_SWITCH_TO_APP), dualBootName);
-    items.push({switchLabel, Transfer, HomeMenuAction::SwitchApp});
-  }
-
+  appendSwitchAppItem(items);
   items.push({tr(STR_SETTINGS_TITLE), Settings, HomeMenuAction::Settings});
 }
 
@@ -316,6 +318,7 @@ HomeMenuEntries buildMinimalMenuItems(bool hasPlugins, bool hasReadingStats, boo
   }
 
   items.push({tr(STR_FILE_TRANSFER), Transfer, HomeMenuAction::FileTransfer});
+  appendSwitchAppItem(items);
   return items;
 }
 
@@ -1513,7 +1516,7 @@ void HomeActivity::loop() {
           case HomeMenuAction::Settings:
             break;
           case HomeMenuAction::SwitchApp:
-            // Dual-boot entry is only built into the full home menu, not this one
+            switchToOtherOtaApp();
             break;
         }
       };
